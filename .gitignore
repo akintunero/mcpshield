@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+*.tsbuildinfo
+.tsbuildinfo
+
+# Test / coverage
+coverage/
+.vitest/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Workshop materials (not part of open-source project)
+WORKSHOP.md
+labs/
+oau-ife.md
+oau-ife.pdf
+sample-data/
+
+# Runtime state
+**/approvals.json
+**/.mcpshield-state/
+scan-snapshots/*.local.json
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+Thumbs.db
+/mcpshield-localstack-bootstrap/
