@@ -1,0 +1,10 @@
+node_modules
+**/node_modules
+dist
+**/dist
+.git
+.mcpshield-state
+.env
+.env.*
+.DS_Store
+*.log
