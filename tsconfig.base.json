@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noPropertyAccessFromIndexSignature": false,
+    "forceConsistentCasingInFileNames": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "useDefineForClassFields": true,
+    "baseUrl": ".",
+    "paths": {
+      "@mcpshield/types": ["packages/types/src/index.ts"],
+      "@mcpshield/logger": ["packages/logger/src/index.ts"],
+      "@mcpshield/config": ["packages/config/src/index.ts"],
+      "@mcpshield/shared": ["packages/shared/src/index.ts"],
+      "@mcpshield/aws-tools": ["packages/aws-tools/src/index.ts"],
+      "@mcpshield/finding-engine": ["packages/finding-engine/src/index.ts"],
+      "@mcpshield/security-engine": ["packages/security-engine/src/index.ts"],
+      "@mcpshield/scoring-engine": ["packages/scoring-engine/src/index.ts"],
+      "@mcpshield/terraform-generator": ["packages/terraform-generator/src/index.ts"],
+      "@mcpshield/aws-cli-generator": ["packages/aws-cli-generator/src/index.ts"],
+      "@mcpshield/report-generator": ["packages/report-generator/src/index.ts"],
+      "@mcpshield/llm": ["packages/llm/src/index.ts"]
+    }
+  }
+}

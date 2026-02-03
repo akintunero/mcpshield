@@ -1,0 +1,45 @@
+{
+  "name": "mcpshield",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "MCPShield — An AI-Powered Cloud Security Analyst using the Model Context Protocol (MCP).",
+  "license": "MIT",
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "pnpm -r test",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "clean": "pnpm -r exec rm -rf dist tsconfig.tsbuildinfo .turbo coverage",
+    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-cloudtrail": "^3.1085.0",
+    "@aws-sdk/client-dynamodb": "^3.1085.0",
+    "@aws-sdk/client-ec2": "^3.1085.0",
+    "@aws-sdk/client-iam": "^3.1085.0",
+    "@aws-sdk/client-lambda": "^3.1085.0",
+    "@aws-sdk/client-s3": "^3.1085.0",
+    "@aws-sdk/client-secrets-manager": "^3.1085.0",
+    "@aws-sdk/client-sns": "^3.1085.0",
+    "@aws-sdk/client-sqs": "^3.1085.0",
+    "@aws-sdk/client-ssm": "^3.1085.0",
+    "@eslint/js": "^9.17.0",
+    "@types/node": "^22.10.5",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.4.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.19.1",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^2.1.8"
+  }
+}
