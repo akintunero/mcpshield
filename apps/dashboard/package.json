@@ -1,0 +1,10 @@
+{
+  "name": "@mcpshield/dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "mkdir -p dist && cp src/index.html dist/index.html && cp src/styles.css dist/styles.css && cp src/app.js dist/app.js",
+    "clean": "rm -rf dist"
+  }
+}
