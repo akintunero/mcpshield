@@ -1,0 +1,109 @@
+services:
+  mcp-server:
+    build:
+      context: .
+      dockerfile: docker/mcp-server/Dockerfile
+    container_name: mcpshield-mcp-server
+    ports:
+      - '7801:7801'
+    volumes:
+      - mcpshield-state:/app/.mcpshield-state
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+      - LOCALSTACK_ENDPOINT=http://host.docker.internal:4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=us-east-1
+      - MCP_TRANSPORT=http
+      - MCP_HTTP_HOST=0.0.0.0
+      - MCP_HTTP_PORT=7801
+      - MCPSHIELD_STATE_DIR=/app/.mcpshield-state
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:7801/health || exit 1']
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+    container_name: mcpshield-api
+    ports:
+      - '7802:7802'
+    volumes:
+      - mcpshield-state:/app/.mcpshield-state
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+      - LOCALSTACK_ENDPOINT=http://host.docker.internal:4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=us-east-1
+      - API_HOST=0.0.0.0
+      - API_PORT=7802
+      - MCPSHIELD_STATE_DIR=/app/.mcpshield-state
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    depends_on:
+      mcp-server:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:7802/health || exit 1']
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  agent:
+    build:
+      context: .
+      dockerfile: docker/agent/Dockerfile
+    container_name: mcpshield-agent
+    volumes:
+      - mcpshield-state:/app/.mcpshield-state
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+      - LOCALSTACK_ENDPOINT=http://host.docker.internal:4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=us-east-1
+      - MCP_TRANSPORT=http
+      - MCP_SERVER_URL=http://mcp-server:7801/sse
+      - MCPSHIELD_STATE_DIR=/app/.mcpshield-state
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    depends_on:
+      mcp-server:
+        condition: service_healthy
+    restart: unless-stopped
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: mcpshield-n8n
+    ports:
+      - '5678:5678'
+    volumes:
+      - n8n-data:/home/node/.n8n
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=mcpshield
+    restart: unless-stopped
+
+volumes:
+  mcpshield-state:
+    name: mcpshield-state
+  n8n-data:
+    name: mcpshield-n8n-data
