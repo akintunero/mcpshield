@@ -1,0 +1,23 @@
+sequenceDiagram
+    participant U as 👤 User (Slack)
+    participant AI as 🤖 AI Security Analyst
+    participant MCP as 🔌 MCP Server
+    participant LS as 🏗️ LocalStack
+    U->>AI: @Shield scan environment
+    AI->>MCP: scan_environment
+    MCP->>LS: ListBuckets, ListUsers, ...
+    LS-->>MCP: Resource snapshots
+    MCP-->>AI: Scan result (15 findings)
+    AI-->>U: 📊 Report: 3 Critical, 5 High, ...
+    U->>AI: @Shield explain finding 1
+    AI-->>U: 📝 Detailed explanation
+    U->>AI: @Shield fix finding 1
+    AI->>MCP: generate_terraform_fix
+    MCP-->>AI: Terraform HCL code
+    AI-->>U: 🏗️ Terraform block + ⚠️ Request approval
+    U->>AI: @Shield approve
+    AI->>MCP: execute_remediation
+    MCP->>LS: put-public-access-block
+    LS-->>MCP: Success
+    MCP-->>AI: ✅ Remediation applied
+    AI-->>U: ✅ Fix complete. Score improved!

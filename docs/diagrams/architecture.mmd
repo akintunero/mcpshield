@@ -1,0 +1,23 @@
+graph TB
+    subgraph Users[" "]
+        Slack[("💬 Slack Bot")]
+        Web[("🌐 Web Dashboard")]
+    end
+    subgraph MCPShield["MCPShield Platform"]
+        Agent["🤖 AI Security Analyst\nLLM + MCP Client"]
+        MCPServer["🔌 MCP Server\n11 security tools"]
+        AWSLayer["☁️ AWS SDK Layer\nS3, IAM, EC2, CloudTrail..."]
+        Packages["📦 Packages\nrules-engine, audit-trail,\nresource-graph, ..."]
+    end
+    subgraph MockAWS["Mock AWS Environment"]
+        LocalStack["🏗️ LocalStack\nlocalhost:4566"]
+    end
+    Slack --> Agent
+    Web --> MCPServer
+    Agent <-->|MCP Protocol| MCPServer
+    MCPServer --> AWSLayer
+    MCPServer --> Packages
+    AWSLayer --> LocalStack
+    style Users fill:#f0f4ff,stroke:#1e40af
+    style MCPShield fill:#f0fdf4,stroke:#059669
+    style MockAWS fill:#fef3c7,stroke:#d97706
