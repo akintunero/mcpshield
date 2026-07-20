@@ -1,6 +1,6 @@
 # Contributing to MCPShield
 
-Thank you for your interest in contributing! This project was built for **Build with AI OAU 2026** and aims to be a high-quality, production-grade open-source cloud security tool.
+Thank you for your interest in contributing! MCPShield aims to be a high-quality, production-grade open-source cloud security tool.
 
 ## Getting Started
 

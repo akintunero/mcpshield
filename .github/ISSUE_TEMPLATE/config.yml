@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: MCPShield Documentation
+    url: https://github.com/akintunero/mcpshield/blob/main/README.md
+    about: Check the README and docs before opening an issue
+  - name: Security Vulnerability
+    url: https://github.com/akintunero/mcpshield/blob/main/SECURITY.md
+    about: Report security vulnerabilities privately — see SECURITY.md
