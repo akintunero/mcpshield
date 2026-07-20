@@ -44,12 +44,13 @@ export function getClientConfig() {
 
 export const s3Client = new S3Client({
   ...getClientConfig(),
-  forcePathStyle: !!(getConfig().aws.endpoint && (
-    getConfig().aws.endpoint.includes('localhost') ||
-    getConfig().aws.endpoint.includes('127.0.0.1') ||
-    getConfig().aws.endpoint.includes('localstack') ||
-    getConfig().aws.endpoint.includes('host.docker.internal')
-  )),
+  forcePathStyle: !!(
+    getConfig().aws.endpoint &&
+    (getConfig().aws.endpoint.includes('localhost') ||
+      getConfig().aws.endpoint.includes('127.0.0.1') ||
+      getConfig().aws.endpoint.includes('localstack') ||
+      getConfig().aws.endpoint.includes('host.docker.internal'))
+  ),
 });
 export const iamClient = new IAMClient(getClientConfig());
 export const lambdaClient = new LambdaClient(getClientConfig());

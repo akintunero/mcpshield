@@ -653,13 +653,25 @@ aws --endpoint-url {{endpoint}} ssm put-parameter \\
     severity: 'high',
     service: 'ssm',
     category: 'Data Protection',
-    description: 'An SSM Parameter contains sensitive configurations (password, secret, key, token) but is stored in unencrypted String format instead of SecureString.',
-    businessImpact: 'Unencrypted parameters are readable in plain-text by any user or machine with read permissions, leading to key leakage and account compromise.',
-    technicalImpact: 'Plaintext storage allows easy extraction of API keys, databases credentials, and certificates.',
-    attackScenario: 'An attacker gains read access to SSM, prints SSM parameters, and harvests DB passwords stored in cleartext String variables.',
+    description:
+      'An SSM Parameter contains sensitive configurations (password, secret, key, token) but is stored in unencrypted String format instead of SecureString.',
+    businessImpact:
+      'Unencrypted parameters are readable in plain-text by any user or machine with read permissions, leading to key leakage and account compromise.',
+    technicalImpact:
+      'Plaintext storage allows easy extraction of API keys, databases credentials, and certificates.',
+    attackScenario:
+      'An attacker gains read access to SSM, prints SSM parameters, and harvests DB passwords stored in cleartext String variables.',
     bestPractice: 'Enforce SecureString parameter types for all credentials and encrypt with KMS.',
-    mitre: [{ tactic: 'Credential Access', techniqueId: 'T1552', techniqueName: 'Unsecured Credentials' }],
-    cis: [{ benchmark: WELL_ARCHITECTED, controlId: 'SEC-01', title: 'Encrypt data in transit and at rest' }],
+    mitre: [
+      { tactic: 'Credential Access', techniqueId: 'T1552', techniqueName: 'Unsecured Credentials' },
+    ],
+    cis: [
+      {
+        benchmark: WELL_ARCHITECTED,
+        controlId: 'SEC-01',
+        title: 'Encrypt data in transit and at rest',
+      },
+    ],
     baseRiskScore: 75,
     remediation: {
       terraform: `resource "aws_ssm_parameter" "{{resourceId}}" {
@@ -670,7 +682,9 @@ aws --endpoint-url {{endpoint}} ssm put-parameter \\
 }`,
       awsCli: `aws --endpoint-url {{endpoint}} ssm put-parameter --name /{{resourceId}} --type SecureString --value "secure-value" --overwrite`,
     },
-    references: ['https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html'],
+    references: [
+      'https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html',
+    ],
   },
   {
     id: 'MCPS-LM-001',
@@ -678,13 +692,23 @@ aws --endpoint-url {{endpoint}} ssm put-parameter \\
     severity: 'medium',
     service: 'lambda',
     category: 'Application Security',
-    description: 'A Lambda function runs on an outdated or deprecated runtime version (e.g. nodejs16.x or older) that no longer receives security updates.',
-    businessImpact: 'Outdated runtimes contain unpatched vulnerabilities, exposing the code execution environment to zero-day remote exploits.',
-    technicalImpact: 'Deprecated runtimes miss critical performance optimizations and engine-level security patches.',
-    attackScenario: 'An attacker exploits an unpatched runtime exploit on a deprecated engine version to escape the Lambda sandbox.',
+    description:
+      'A Lambda function runs on an outdated or deprecated runtime version (e.g. nodejs16.x or older) that no longer receives security updates.',
+    businessImpact:
+      'Outdated runtimes contain unpatched vulnerabilities, exposing the code execution environment to zero-day remote exploits.',
+    technicalImpact:
+      'Deprecated runtimes miss critical performance optimizations and engine-level security patches.',
+    attackScenario:
+      'An attacker exploits an unpatched runtime exploit on a deprecated engine version to escape the Lambda sandbox.',
     bestPractice: 'Upgrade function runtimes to active, supported versions (e.g. nodejs20.x).',
     mitre: [{ tactic: 'Execution', techniqueId: 'T1204', techniqueName: 'User Execution' }],
-    cis: [{ benchmark: WELL_ARCHITECTED, controlId: 'SEC-02', title: 'Keep runtimes and libraries up to date' }],
+    cis: [
+      {
+        benchmark: WELL_ARCHITECTED,
+        controlId: 'SEC-02',
+        title: 'Keep runtimes and libraries up to date',
+      },
+    ],
     baseRiskScore: 50,
     remediation: {
       terraform: `resource "aws_lambda_function" "{{resourceId}}" {
@@ -701,10 +725,14 @@ aws --endpoint-url {{endpoint}} ssm put-parameter \\
     severity: 'medium',
     service: 'sqs',
     category: 'Data Protection',
-    description: 'An SQS queue does not have server-side encryption enabled to protect messages at rest.',
-    businessImpact: 'Message payloads containing PII, transactions, or credentials are stored in plain text on physical drives, raising compliance risks.',
-    technicalImpact: 'Plaintext drive exposure could allow third-parties or unauthorized AWS identities to read message contents directly.',
-    attackScenario: 'An attacker intercepts messages stored in the message broker queue backlog which lack KMS protection.',
+    description:
+      'An SQS queue does not have server-side encryption enabled to protect messages at rest.',
+    businessImpact:
+      'Message payloads containing PII, transactions, or credentials are stored in plain text on physical drives, raising compliance risks.',
+    technicalImpact:
+      'Plaintext drive exposure could allow third-parties or unauthorized AWS identities to read message contents directly.',
+    attackScenario:
+      'An attacker intercepts messages stored in the message broker queue backlog which lack KMS protection.',
     bestPractice: 'Enable SQS server-side encryption (SSE) using AWS KMS CMK key.',
     mitre: [{ tactic: 'Collection', techniqueId: 'T1056', techniqueName: 'Input Capture' }],
     cis: [{ benchmark: WELL_ARCHITECTED, controlId: 'SEC-03', title: 'Protect data at rest' }],
@@ -717,7 +745,9 @@ aws --endpoint-url {{endpoint}} ssm put-parameter \\
 }`,
       awsCli: `aws --endpoint-url {{endpoint}} sqs set-queue-attributes --queue-url {{endpoint}}/000000000000/{{resourceId}} --attributes KmsMasterKeyId=alias/aws/sqs`,
     },
-    references: ['https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-server-side-encryption.html'],
+    references: [
+      'https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-server-side-encryption.html',
+    ],
   },
   {
     id: 'MCPS-SNS-001',
@@ -725,10 +755,14 @@ aws --endpoint-url {{endpoint}} ssm put-parameter \\
     severity: 'medium',
     service: 'sns',
     category: 'Data Protection',
-    description: 'An SNS topic does not have server-side encryption enabled to protect messages at rest.',
-    businessImpact: 'Notifications or messages passed through the topic can be read in plain-text if physical disks are exposed, violating confidentiality.',
-    technicalImpact: 'Disks hosting raw SNS pub-sub logs are readable without cryptographic decryption layers.',
-    attackScenario: 'An attacker with disk-level access intercepts raw messaging contents moving through unencrypted topics.',
+    description:
+      'An SNS topic does not have server-side encryption enabled to protect messages at rest.',
+    businessImpact:
+      'Notifications or messages passed through the topic can be read in plain-text if physical disks are exposed, violating confidentiality.',
+    technicalImpact:
+      'Disks hosting raw SNS pub-sub logs are readable without cryptographic decryption layers.',
+    attackScenario:
+      'An attacker with disk-level access intercepts raw messaging contents moving through unencrypted topics.',
     bestPractice: 'Enable SNS server-side encryption (SSE) using AWS KMS CMK key.',
     mitre: [{ tactic: 'Collection', techniqueId: 'T1056', techniqueName: 'Input Capture' }],
     cis: [{ benchmark: WELL_ARCHITECTED, controlId: 'SEC-03', title: 'Protect data at rest' }],
@@ -748,12 +782,19 @@ aws --endpoint-url {{endpoint}} ssm put-parameter \\
     severity: 'medium',
     service: 'dynamodb',
     category: 'Data Protection',
-    description: 'A DynamoDB table is encrypted with default AWS-owned keys instead of a customer-managed KMS key (CMK).',
-    businessImpact: 'Limits auditing capability of decryption events and prevents granular access control for sensitive database items.',
-    technicalImpact: 'Encryption-at-rest decryption permissions cannot be restricted using custom KMS key policies.',
-    attackScenario: 'An attacker with broad AWS access reads table elements because they cannot be separately blocked by key policies.',
-    bestPractice: 'Encrypt DynamoDB tables with Customer Managed Keys (CMKs) to enable decryption audits.',
-    mitre: [{ tactic: 'Collection', techniqueId: 'T1530', techniqueName: 'Data from Cloud Storage' }],
+    description:
+      'A DynamoDB table is encrypted with default AWS-owned keys instead of a customer-managed KMS key (CMK).',
+    businessImpact:
+      'Limits auditing capability of decryption events and prevents granular access control for sensitive database items.',
+    technicalImpact:
+      'Encryption-at-rest decryption permissions cannot be restricted using custom KMS key policies.',
+    attackScenario:
+      'An attacker with broad AWS access reads table elements because they cannot be separately blocked by key policies.',
+    bestPractice:
+      'Encrypt DynamoDB tables with Customer Managed Keys (CMKs) to enable decryption audits.',
+    mitre: [
+      { tactic: 'Collection', techniqueId: 'T1530', techniqueName: 'Data from Cloud Storage' },
+    ],
     cis: [{ benchmark: WELL_ARCHITECTED, controlId: 'SEC-03', title: 'Protect data at rest' }],
     baseRiskScore: 40,
     remediation: {
@@ -766,7 +807,9 @@ aws --endpoint-url {{endpoint}} ssm put-parameter \\
 }`,
       awsCli: `aws --endpoint-url {{endpoint}} dynamodb update-table --table-name {{resourceId}} --ss-specification Enabled=true,SSEType=KMS,KMSMasterKeyId=arn:aws:kms:{{region}}:000000000000:key/custom-key`,
     },
-    references: ['https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/EncryptionAtRest.html'],
+    references: [
+      'https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/EncryptionAtRest.html',
+    ],
   },
   {
     id: 'MCPS-SEC-001',
@@ -774,13 +817,26 @@ aws --endpoint-url {{endpoint}} ssm put-parameter \\
     severity: 'medium',
     service: 'secretsmanager',
     category: 'Data Protection',
-    description: 'A secret in Secrets Manager is encrypted with the default account key instead of a customer-managed KMS key (CMK).',
-    businessImpact: 'Any user or role with Secrets Manager read access can read the secret value without requiring separate KMS decryption rights.',
-    technicalImpact: 'Bypasses the security depth of requiring two separate IAM permissions (secretsmanager:GetSecretValue and kms:Decrypt).',
-    attackScenario: 'An IAM user with generic Secrets Manager read privileges retrieves database passwords because no custom KMS key policy blocks them.',
-    bestPractice: 'Encrypt all secrets with Customer Managed Keys (CMKs) to enforce dual-layered authorization.',
-    mitre: [{ tactic: 'Credential Access', techniqueId: 'T1552', techniqueName: 'Unsecured Credentials' }],
-    cis: [{ benchmark: WELL_ARCHITECTED, controlId: 'SEC-01', title: 'Encrypt data in transit and at rest' }],
+    description:
+      'A secret in Secrets Manager is encrypted with the default account key instead of a customer-managed KMS key (CMK).',
+    businessImpact:
+      'Any user or role with Secrets Manager read access can read the secret value without requiring separate KMS decryption rights.',
+    technicalImpact:
+      'Bypasses the security depth of requiring two separate IAM permissions (secretsmanager:GetSecretValue and kms:Decrypt).',
+    attackScenario:
+      'An IAM user with generic Secrets Manager read privileges retrieves database passwords because no custom KMS key policy blocks them.',
+    bestPractice:
+      'Encrypt all secrets with Customer Managed Keys (CMKs) to enforce dual-layered authorization.',
+    mitre: [
+      { tactic: 'Credential Access', techniqueId: 'T1552', techniqueName: 'Unsecured Credentials' },
+    ],
+    cis: [
+      {
+        benchmark: WELL_ARCHITECTED,
+        controlId: 'SEC-01',
+        title: 'Encrypt data in transit and at rest',
+      },
+    ],
     baseRiskScore: 45,
     remediation: {
       terraform: `resource "aws_secretsmanager_secret" "{{resourceId}}" {
@@ -789,6 +845,8 @@ aws --endpoint-url {{endpoint}} ssm put-parameter \\
 }`,
       awsCli: `aws --endpoint-url {{endpoint}} secretsmanager update-secret --secret-id {{resourceId}} --kms-key-id arn:aws:kms:{{region}}:000000000000:key/custom-key`,
     },
-    references: ['https://docs.aws.amazon.com/secretsmanager/latest/userguide/security-encryption.html'],
+    references: [
+      'https://docs.aws.amazon.com/secretsmanager/latest/userguide/security-encryption.html',
+    ],
   },
 ];

@@ -57,7 +57,9 @@ async function main() {
           findingsCount: result.findings.length,
         };
       } finally {
-        try { await mcpClient.close(); } catch {}
+        try {
+          await mcpClient.close();
+        } catch {}
       }
     } catch (err: any) {
       logger.error(`Error in /api/scan: ${err.message}`, err);
@@ -117,7 +119,9 @@ Provide professional, concise responses.`,
         } as any);
 
         for (const tc of completion.toolCalls) {
-          logger.info(`Dashboard Chatbot invoking tool: ${tc.name} with args: ${JSON.stringify(tc.arguments)}`);
+          logger.info(
+            `Dashboard Chatbot invoking tool: ${tc.name} with args: ${JSON.stringify(tc.arguments)}`,
+          );
           const toolResult = await mcpClient.callTool({
             name: tc.name,
             arguments: tc.arguments as any,
@@ -141,7 +145,6 @@ Provide professional, concise responses.`,
       return {
         content: completion.content,
       };
-
     } catch (err: any) {
       logger.error(`Error in /api/chat: ${err.message}`, err);
       return reply.status(500).send({ error: err.message });

@@ -198,10 +198,11 @@ Do NOT output code blocks; let the developer know they can generate remediations
           arguments: {},
         });
         const stateResult = JSON.parse((stateRes as any).content[0].text);
-        const resolvedFinding = stateResult.findings.find((f: any) => 
-          f.findingId === rawFindingId || 
-          f.resource.id === rawFindingId || 
-          f.findingId.toLowerCase().includes(rawFindingId.toLowerCase())
+        const resolvedFinding = stateResult.findings.find(
+          (f: any) =>
+            f.findingId === rawFindingId ||
+            f.resource.id === rawFindingId ||
+            f.findingId.toLowerCase().includes(rawFindingId.toLowerCase()),
         );
 
         if (!resolvedFinding) {

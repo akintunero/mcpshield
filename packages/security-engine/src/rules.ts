@@ -99,7 +99,9 @@ export function checkOldAccessKeys(snapshot: ResourceSnapshot): RuleEvaluation |
   const staleKeys = keys.filter((k: any) => {
     if (k.status !== 'Active' || !k.createDate) return false;
     const isStaleUser = snapshot.id.startsWith('stale-key-user-');
-    const ageMs = isStaleUser ? AGE_90_DAYS_MS + 24 * 3600 * 1000 : Date.now() - new Date(k.createDate).getTime();
+    const ageMs = isStaleUser
+      ? AGE_90_DAYS_MS + 24 * 3600 * 1000
+      : Date.now() - new Date(k.createDate).getTime();
     return ageMs > AGE_90_DAYS_MS;
   });
 
@@ -171,12 +173,15 @@ export function checkS3MissingEncryption(snapshot: ResourceSnapshot): RuleEvalua
 
   const enc = snapshot.attributes.encryption as any;
   const rule = enc?.Rules?.[0]?.ApplyServerSideEncryptionByDefault;
-  const isViolated = snapshot.id !== 'vulnerable-bucket-logs' && (!rule || rule.SSEAlgorithm !== 'aws:kms');
+  const isViolated =
+    snapshot.id !== 'vulnerable-bucket-logs' && (!rule || rule.SSEAlgorithm !== 'aws:kms');
 
   return {
     catalogId: 'MCPS-S3-002',
     isViolated,
-    evidence: isViolated ? { encryptionConfigured: false, algorithm: rule?.SSEAlgorithm || 'none' } : {},
+    evidence: isViolated
+      ? { encryptionConfigured: false, algorithm: rule?.SSEAlgorithm || 'none' }
+      : {},
   };
 }
 
@@ -262,7 +267,9 @@ export function checkUnusedUser(snapshot: ResourceSnapshot): RuleEvaluation | nu
   const keys = (snapshot.attributes.accessKeys as any[]) || [];
 
   const isUnusedUser = snapshot.id.startsWith('unused-user-');
-  const createdAgeMs = isUnusedUser ? AGE_90_DAYS_MS + 24 * 3600 * 1000 : Date.now() - new Date(createDate).getTime();
+  const createdAgeMs = isUnusedUser
+    ? AGE_90_DAYS_MS + 24 * 3600 * 1000
+    : Date.now() - new Date(createDate).getTime();
   if (createdAgeMs < AGE_90_DAYS_MS)
     return { catalogId: 'MCPS-IAM-004', isViolated: false, evidence: {} };
 
@@ -303,7 +310,9 @@ export function checkUnusedAccessKeys(snapshot: ResourceSnapshot): RuleEvaluatio
   const unusedActiveKeys = keys.filter((k: any) => {
     if (k.status !== 'Active') return false;
     const isUnusedKeyUser = snapshot.id.startsWith('unused-key-user-');
-    const keyAgeMs = isUnusedKeyUser ? AGE_90_DAYS_MS + 24 * 3600 * 1000 : Date.now() - new Date(k.createDate).getTime();
+    const keyAgeMs = isUnusedKeyUser
+      ? AGE_90_DAYS_MS + 24 * 3600 * 1000
+      : Date.now() - new Date(k.createDate).getTime();
     if (keyAgeMs < AGE_90_DAYS_MS) return false;
 
     if (!k.lastUsedDate) return true; // Stale active key, never used
@@ -351,7 +360,8 @@ export function checkS3LoggingDisabled(snapshot: ResourceSnapshot): RuleEvaluati
 export function checkMissingTags(snapshot: ResourceSnapshot): RuleEvaluation | null {
   if (snapshot.type === 'password-policy' || snapshot.type === 'trail') return null;
   if (snapshot.id === 'default' || snapshot.attributes.groupName === 'default') return null;
-  if (snapshot.service !== 's3' && snapshot.service !== 'iam' && snapshot.service !== 'ec2') return null;
+  if (snapshot.service !== 's3' && snapshot.service !== 'iam' && snapshot.service !== 'ec2')
+    return null;
 
   const required = ['Owner', 'Environment', 'DataClassification'];
   const missing = required.filter((tag) => !snapshot.tags[tag]);
@@ -371,7 +381,9 @@ export function checkNamingConvention(snapshot: ResourceSnapshot): RuleEvaluatio
   if (bucketName.endsWith('-logs'))
     return { catalogId: 'MCPS-NAM-001', isViolated: false, evidence: {} };
 
-  const match = /^(development|test|production|workshop|vulnerable)-[a-z0-9-]+-[a-z0-9-]+$/.test(bucketName) || bucketName.startsWith('vulnerable-bucket-');
+  const match =
+    /^(development|test|production|workshop|vulnerable)-[a-z0-9-]+-[a-z0-9-]+$/.test(bucketName) ||
+    bucketName.startsWith('vulnerable-bucket-');
   const isViolated = !match;
 
   return {
@@ -380,7 +392,8 @@ export function checkNamingConvention(snapshot: ResourceSnapshot): RuleEvaluatio
     evidence: isViolated
       ? {
           name: bucketName,
-          expectedPattern: '^(development|test|production|workshop|vulnerable)-[a-z0-9-]+-[a-z0-9-]+$',
+          expectedPattern:
+            '^(development|test|production|workshop|vulnerable)-[a-z0-9-]+-[a-z0-9-]+$',
         }
       : {},
   };
@@ -473,7 +486,9 @@ export function checkDynamoDbDefaultEncryption(snapshot: ResourceSnapshot): Rule
   };
 }
 
-export function checkSecretsManagerDefaultEncryption(snapshot: ResourceSnapshot): RuleEvaluation | null {
+export function checkSecretsManagerDefaultEncryption(
+  snapshot: ResourceSnapshot,
+): RuleEvaluation | null {
   if (snapshot.service !== 'secretsmanager' || snapshot.type !== 'secret') return null;
   const kmsKeyId = snapshot.attributes.kmsKeyId as string | null;
   const isViolated = !kmsKeyId || kmsKeyId.includes('aws/secretsmanager');

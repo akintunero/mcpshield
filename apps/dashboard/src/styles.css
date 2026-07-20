@@ -1,51 +1,51 @@
 :root {
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
-  
+
   /* Notion & Stripe Inspired Palette */
   --bg-app: #fcfcfc;
   --bg-card: #ffffff;
   --bg-secondary: #f9f9fb;
   --bg-hover: #f4f5f6;
-  
+
   --border-color: #e4e4e7;
   --border-hover: #a1a1aa;
   --border-focus: #000000;
-  
+
   --text-primary: #18181b;
   --text-secondary: #52525b;
   --text-muted: #71717a;
-  
+
   --color-primary: #000000;
   --color-primary-hover: #27272a;
   --color-emerald: #0f766e;
   --color-gray: #71717a;
-  
+
   /* Enterprise severity styling (flat, clean) */
   --color-critical: #b91c1c;
   --color-critical-bg: #fef2f2;
   --color-critical-border: #fca5a5;
-  
+
   --color-high: #c2410c;
   --color-high-bg: #fff7ed;
   --color-high-border: #fdba74;
-  
+
   --color-medium: #b45309;
   --color-medium-bg: #fefbeb;
   --color-medium-border: #fcd34d;
-  
+
   --color-low: #0369a1;
   --color-low-bg: #f0f9ff;
   --color-low-border: #7dd3fc;
-  
+
   --color-resolved: #166534;
   --color-resolved-bg: #f0fdf4;
   --color-resolved-border: #86efac;
-  
+
   --radius-lg: 6px;
   --radius-md: 4px;
   --radius-sm: 2px;
-  
+
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.01);
 }
@@ -342,10 +342,18 @@ body {
   border-left: 3px solid var(--color-gray);
 }
 
-.stat-item.critical { border-left-color: var(--color-critical); }
-.stat-item.high { border-left-color: var(--color-high); }
-.stat-item.medium { border-left-color: var(--color-medium); }
-.stat-item.low { border-left-color: var(--color-low); }
+.stat-item.critical {
+  border-left-color: var(--color-critical);
+}
+.stat-item.high {
+  border-left-color: var(--color-high);
+}
+.stat-item.medium {
+  border-left-color: var(--color-medium);
+}
+.stat-item.low {
+  border-left-color: var(--color-low);
+}
 
 .stat-badge {
   font-size: 11px;
@@ -452,11 +460,31 @@ body {
   border: 1px solid transparent;
 }
 
-.badge.critical { background-color: var(--color-critical-bg); color: var(--color-critical); border-color: var(--color-critical-border); }
-.badge.high { background-color: var(--color-high-bg); color: var(--color-high); border-color: var(--color-high-border); }
-.badge.medium { background-color: var(--color-medium-bg); color: var(--color-medium); border-color: var(--color-medium-border); }
-.badge.low { background-color: var(--color-low-bg); color: var(--color-low); border-color: var(--color-low-border); }
-.badge.resolved { background-color: var(--color-resolved-bg); color: var(--color-resolved); border-color: var(--color-resolved-border); }
+.badge.critical {
+  background-color: var(--color-critical-bg);
+  color: var(--color-critical);
+  border-color: var(--color-critical-border);
+}
+.badge.high {
+  background-color: var(--color-high-bg);
+  color: var(--color-high);
+  border-color: var(--color-high-border);
+}
+.badge.medium {
+  background-color: var(--color-medium-bg);
+  color: var(--color-medium);
+  border-color: var(--color-medium-border);
+}
+.badge.low {
+  background-color: var(--color-low-bg);
+  color: var(--color-low);
+  border-color: var(--color-low-border);
+}
+.badge.resolved {
+  background-color: var(--color-resolved-bg);
+  color: var(--color-resolved);
+  border-color: var(--color-resolved-border);
+}
 
 .finding-service {
   font-family: var(--font-mono);
@@ -525,8 +553,12 @@ body {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 #remediation-content {
@@ -739,12 +771,21 @@ code {
   transition: width 0.4s ease;
 }
 
-.graph-row.critical .graph-bar { background-color: var(--color-critical); }
-.graph-row.high .graph-bar { background-color: var(--color-high); }
-.graph-row.medium .graph-bar { background-color: var(--color-medium); }
-.graph-row.low .graph-bar { background-color: var(--color-low); }
-.graph-row.resolved .graph-bar { background-color: var(--color-resolved); }
-
+.graph-row.critical .graph-bar {
+  background-color: var(--color-critical);
+}
+.graph-row.high .graph-bar {
+  background-color: var(--color-high);
+}
+.graph-row.medium .graph-bar {
+  background-color: var(--color-medium);
+}
+.graph-row.low .graph-bar {
+  background-color: var(--color-low);
+}
+.graph-row.resolved .graph-bar {
+  background-color: var(--color-resolved);
+}
 
 /* Chatbot panel styles */
 .chat-card {
