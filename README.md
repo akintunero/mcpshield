@@ -27,114 +27,161 @@ MCPShield uses AI agents to scan cloud environments, detect security misconfigur
 
 ```mermaid
 graph TB
-    subgraph "Users & Interfaces"
-        Slack[Slack Bot<br/>Socket Mode]
-        Browser[Web Browser<br/>Dashboard UI]
+    %% Styling
+    classDef user fill:#e0e7ff,stroke:#6366f1,stroke-width:2px,color:#1e1b4b
+    classDef service fill:#dbeafe,stroke:#3b82f6,stroke-width:2px,color:#1e3a5f
+    classDef engine fill:#fef3c7,stroke:#f59e0b,stroke-width:2px,color:#78350f
+    classDef cloud fill:#d1fae5,stroke:#10b981,stroke-width:2px,color:#064e3b
+    classDef critical fill:#fee2e2,stroke:#ef4444,stroke-width:3px,color:#7f1d1d,stroke-dasharray: 5 3
+
+    subgraph Users[" "]
+        direction LR
+        Slack["💬 Slack Bot<br/><span style='font-size:10px'>Socket Mode</span>"]
+        Browser["🌐 Web Browser<br/><span style='font-size:10px'>Dashboard UI</span>"]
     end
 
-    subgraph "MCPShield Services"
-        Agent[AI Security Analyst<br/>Port: —<br/>LLM + MCP Client]
-        API[REST API Server<br/>Port: 7802<br/>Fastify + Dashboard]
-        MCPServer[MCP Server<br/>Port: 7801 / stdio<br/>11 Tools + Zod]
+    subgraph Services[" "]
+        direction TB
+        Agent["🤖 AI Security Analyst<br/><span style='font-size:10px'>LLM + MCP Client</span>"]
+        MCPServer["⚙️ MCP Server<br/><span style='font-size:10px'>11 Tools · Zod Validation</span>"]
+        API["🔌 REST API Server<br/><span style='font-size:10px'>Fastify · Port 7802</span>"]
     end
 
-    subgraph "Engine Packages"
-        Scanner[Scanner Engine<br/>21 Security Rules<br/>MITRE + CIS Mappings]
-        Score[Scoring Engine<br/>0–100, A–F<br/>Severity Breakdown]
-        CloudTools[AWS SDK Layer<br/>S3, IAM, EC2, Lambda<br/>SQS, SNS, SSM, DDB...]
-        Remediation[Code Generators<br/>Terraform + AWS CLI<br/>Report Generator]
+    subgraph Engine[" "]
+        direction TB
+        Scanner["🔍 Scanner Engine<br/><span style='font-size:10px'>21 Security Rules · MITRE + CIS</span>"]
+        Score["📊 Scoring Engine<br/><span style='font-size:10px'>0–100 Score · A–F Grade</span>"]
+        Generators["📝 Code Generators<br/><span style='font-size:10px'>Terraform · AWS CLI · Reports</span>"]
+        CloudTools["☁️ AWS SDK Layer<br/><span style='font-size:10px'>S3 · IAM · EC2 · Lambda · SQS · SNS · SSM · DDB · Secrets</span>"]
     end
 
-    subgraph "Cloud Endpoint"
-        Target[AWS<br/>API Endpoint]
+    subgraph Cloud[" "]
+        Target["🏢 AWS Cloud<br/><span style='font-size:10px'>API Endpoint</span>"]
     end
 
-    Slack -- "MCP Protocol (SSE)" --> MCPServer
-    Browser -- "HTTP REST" --> API
-    Agent -- "MCP Protocol" --> MCPServer
-    API -- "MCP Client → Server" --> MCPServer
+    Slack -->|"MCP Protocol (SSE)"| MCPServer
+    Browser -->|"HTTP REST"| API
+    Agent -->|"MCP Protocol"| MCPServer
+    API -->|"MCP Client → Server"| MCPServer
 
     MCPServer --> Scanner
     MCPServer --> Score
-    MCPServer --> Remediation
+    MCPServer --> Generators
     Scanner --> CloudTools
-    CloudTools --> Target
+    Generators --> CloudTools
+    CloudTools -->|"AWS SDK v3"| Target
+
+    class Slack,Browser user
+    class Agent,API,MCPServer service
+    class Scanner,Score,Generators,CloudTools engine
+    class Target cloud
 ```
 
-**Key:** The AI agent NEVER communicates directly with the cloud. Every read/write operation goes through MCP tools.
+> **🔐 Security Boundary:** The AI agent NEVER communicates directly with the cloud. ALL read and write operations pass through MCP tools, ensuring a strict security boundary.
 
 ### Data Flow
 
 ```mermaid
 sequenceDiagram
-    participant U as User
-    participant S as Slack / Dashboard
-    participant A as AI Agent
-    participant M as MCP Server
-    participant E as Engine (Scan/Score/Fix)
-    participant C as Cloud (AWS)
+    participant User as 👤 User
+    participant UI as 🖥️ Slack / Dashboard
+    participant MCP as ⚙️ MCP Server
+    participant Engine as 🧠 Security Engine
+    participant Cloud as ☁️ AWS
 
-    U->>S: "scan my environment"
-    S->>M: scan_environment
-    M->>E: runSecurityEngine()
-    E->>C: ListBuckets, ListUsers, ...
-    C-->>E: Resource snapshots
-    E-->>M: 21 rule evaluations
-    M->>E: computeSecurityScore()
-    E-->>M: Score + Findings
-    M-->>S: ScanResult (findings + score)
-    S-->>U: "Found 5 open vulnerabilities"
+    rect rgb(219, 234, 254)
+        Note over User,Cloud: 🔄 SCAN PHASE
+        User->>UI: "scan my environment"
+        UI->>MCP: scan_environment
+        MCP->>Engine: runSecurityEngine()
+        Engine->>Cloud: ListBuckets, ListUsers, ...
+        Cloud-->>Engine: Resource snapshots
+        Engine-->>MCP: 21 rule evaluations
+        MCP->>Engine: computeSecurityScore()
+        Engine-->>MCP: Score + Findings
+        MCP-->>UI: ScanResult (findings + score)
+        UI-->>User: "Found 5 open vulnerabilities"
+    end
 
-    U->>S: "explain finding MCPS-S3-001"
-    S->>M: describe_finding
-    M-->>S: Full finding details + mapping
-    S-->>U: Business impact + attack scenario
+    rect rgb(254, 243, 199)
+        Note over User,Cloud: 📖 EXPLAIN PHASE
+        User->>UI: "explain MCPS-S3-001"
+        UI->>MCP: describe_finding
+        MCP-->>UI: Full details + MITRE/CIS mapping
+        UI-->>User: Business impact + attack scenario
+    end
 
-    U->>S: "fix it"
-    S->>M: approve_remediation + execute_remediation
-    M->>E: mapFindingToRemediation()
-    E->>C: putPublicAccessBlock, ...
-    C-->>E: Success
-    E-->>M: RemediationResult
-    M-->>S: "Fix applied, score updated"
+    rect rgb(209, 250, 229)
+        Note over User,Cloud: 🛠️ REMEDIATION PHASE
+        User->>UI: "fix finding MCPS-S3-001"
+        UI->>MCP: generate_terraform_fix
+        MCP-->>UI: Terraform HCL code
+        UI-->>User: Show fix + request approval
+        User->>UI: "approve"
+        UI->>MCP: execute_remediation
+        MCP->>Cloud: putPublicAccessBlock, ...
+        Cloud-->>MCP: Success ✅
+        MCP-->>UI: RemediationResult
+        UI-->>User: "Fix applied, score updated"
+    end
 ```
 
-### Approval Workflow
+### Human-in-the-Loop Approval Workflow
 
 ```mermaid
 sequenceDiagram
-    participant U as User (Slack)
-    participant AI as AI Security Analyst
-    participant MCP as MCP Server
-    participant C as Cloud
+    participant User as 👤 Slack User
+    participant AI as 🤖 AI Security Analyst
+    participant MCP as ⚙️ MCP Server
+    participant Cloud as ☁️ AWS
 
-    U->>AI: @Shield fix finding MCPS-S3-001
+    Note over User,Cloud: 🔍 DISCOVERY
+    User->>AI: @Shield scan environment
+    AI->>MCP: scan_environment
+    MCP-->>AI: Findings + Score
+    AI-->>User: 📋 Report with risk summary
+
+    Note over User,Cloud: 📄 FIX PROPOSAL
+    User->>AI: @Shield fix MCPS-S3-001
     AI->>MCP: generate_terraform_fix
     MCP-->>AI: Terraform HCL
-    AI-->>U: Show fix & ask approval
-    U->>AI: @Shield approve
+    AI-->>User: 🏗️ Proposed fix (HCL block)
+
+    Note over User,Cloud: ✅ HUMAN APPROVAL
+    User->>AI: @Shield approve
+    AI->>MCP: approve_remediation
+    MCP-->>AI: Approval ID
+
+    Note over User,Cloud: ⚡ EXECUTION
     AI->>MCP: execute_remediation
-    MCP->>C: AWS SDK call
-    C-->>MCP: Success
+    MCP->>Cloud: AWS SDK call
+    Cloud-->>MCP: Success
     MCP-->>AI: Remediation result
-    AI-->>U: ✅ Fix applied
+    AI-->>User: ✅ "Remediation complete — score updated"
 ```
 
 ### Provider Architecture
 
 ```mermaid
 graph LR
-    Core[MCPShield Core] --> AWS[AWS Provider<br/>Implemented]
-    Core --> Azure[Azure Provider<br/>Planned]
-    Core --> GCP[GCP Provider<br/>Planned]
-    Core --> K8s[Kubernetes Provider<br/>Planned]
+    %% Styling
+    classDef core fill:#1e40af,stroke:#1e3a8a,color:#fff,stroke-width:3px
+    classDef active fill:#059669,stroke:#047857,color:#fff,stroke-width:2px
+    classDef planned fill:#fef3c7,stroke:#d97706,color:#78350f,stroke-width:2px,stroke-dasharray: 6 4
+    classDef sub fill:#d1fae5,stroke:#10b981,color:#064e3b
+
+    Core["🧩 MCPShield Core"] --> AWS["☁️ AWS Provider"]
+    Core --> Azure["🔵 Azure Provider"]
+    Core --> GCP["🟢 GCP Provider"]
+    Core --> K8s["⎈ Kubernetes Provider"]
     
-    subgraph AWS
-        A1[S3 Scanner]
-        A2[IAM Scanner]
-        A3[EC2 Scanner]
-        A4[Lambda Scanner]
-        A5[SQS/SNS/DDB/SSM/...]
+    subgraph Services["AWS Services (Implemented)"]
+        direction TB
+        A1["📦 S3 Scanner<br/><span style='font-size:9px'>Public access · Encryption · Versioning</span>"]
+        A2["👤 IAM Scanner<br/><span style='font-size:9px'>Policies · Keys · Password policy</span>"]
+        A3["🖥️ EC2 Scanner<br/><span style='font-size:9px'>Security groups · Open ports</span>"]
+        A4["⚡ Lambda / CloudTrail<br/><span style='font-size:9px'>Runtimes · Audit logging</span>"]
+        A5["📨 SQS / SNS / DDB / SSM / Secrets<br/><span style='font-size:9px'>Encryption · SecureString · KMS</span>"]
     end
 
     AWS --> A1
@@ -143,14 +190,13 @@ graph LR
     AWS --> A4
     AWS --> A5
 
-    style Core fill:#1e40af,color:#fff
-    style AWS fill:#059669,color:#fff
-    style Azure fill:#2563eb,color:#fff,stroke-dasharray: 5 5
-    style GCP fill:#d97706,color:#fff,stroke-dasharray: 5 5
-    style K8s fill:#7c3aed,color:#fff,stroke-dasharray: 5 5
+    class Core core
+    class AWS active
+    class Azure,GCP,K8s planned
+    class A1,A2,A3,A4,A5 sub
 ```
 
-Currently ships with the **AWS provider** only. Additional providers are on the roadmap.
+Ships with the **AWS provider** — Azure, GCP, and Kubernetes providers are on the roadmap.
 
 ---
 
