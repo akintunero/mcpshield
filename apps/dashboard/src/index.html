@@ -1,223 +1,258 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MCPShield — Cloud Security Analyst Dashboard</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body class="light-theme">
-  <div class="app-container">
-    <!-- Header -->
-    <header class="app-header">
-      <div class="logo-area">
-        <div class="logo-text">
-          <h1>MCPShield</h1>
-          <span class="tagline">AI-Powered Cloud Security Posture Management</span>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MCPShield — Cloud Security Analyst Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="light-theme">
+    <div class="app-container">
+      <!-- Header -->
+      <header class="app-header">
+        <div class="logo-area">
+          <div class="logo-text">
+            <h1>MCPShield</h1>
+            <span class="tagline">AI-Powered Cloud Security Posture Management</span>
+          </div>
         </div>
-      </div>
-      
-      <div class="header-status">
-        <div class="status-indicator">
-          <span class="pulse-dot green"></span>
-          <span class="status-label">LocalStack Connected</span>
-        </div>
-        <button id="refresh-btn" class="btn btn-secondary">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-          Sync State
-        </button>
-      </div>
-    </header>
 
-    <!-- Dashboard Content -->
-    <main class="dashboard-grid">
-      
-      <!-- Posture Summary Section -->
-      <section class="card posture-card">
-        <div class="card-header">
-          <h2>Security Posture</h2>
-        </div>
-        <div class="posture-display">
-          <div class="score-ring-container">
-            <svg class="score-ring" viewBox="0 0 120 120">
-              <circle class="ring-bg" cx="60" cy="60" r="50"/>
-              <circle class="ring-fg" cx="60" cy="60" r="50" style="stroke-dasharray: 314; stroke-dashoffset: 314;"/>
+        <div class="header-status">
+          <div class="status-indicator">
+            <span class="pulse-dot green"></span>
+            <span class="status-label">LocalStack Connected</span>
+          </div>
+          <button id="refresh-btn" class="btn btn-secondary">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
             </svg>
-            <div class="score-text">
-              <span id="posture-score">0</span>
-              <span class="score-max">/100</span>
-            </div>
-          </div>
-          <div class="grade-badge" id="posture-grade">-</div>
+            Sync State
+          </button>
         </div>
-        
-        <div class="scan-meta">
-          <p><strong>Last Scanned:</strong> <span id="last-scan-time">Never</span></p>
-          <p><strong>Total Resources:</strong> <span id="resources-count">0</span></p>
-        </div>
+      </header>
 
-        <hr class="card-divider">
-
-        <div class="stats-graph">
-          <div class="graph-row critical">
-            <div class="graph-label">
-              <span>Critical</span>
-              <span id="count-critical" class="graph-value">0</span>
-            </div>
-            <div class="graph-bar-bg">
-              <div id="bar-critical" class="graph-bar" style="width: 0%;"></div>
-            </div>
+      <!-- Dashboard Content -->
+      <main class="dashboard-grid">
+        <!-- Posture Summary Section -->
+        <section class="card posture-card">
+          <div class="card-header">
+            <h2>Security Posture</h2>
           </div>
-          <div class="graph-row high">
-            <div class="graph-label">
-              <span>High</span>
-              <span id="count-high" class="graph-value">0</span>
-            </div>
-            <div class="graph-bar-bg">
-              <div id="bar-high" class="graph-bar" style="width: 0%;"></div>
-            </div>
-          </div>
-          <div class="graph-row medium">
-            <div class="graph-label">
-              <span>Medium</span>
-              <span id="count-medium" class="graph-value">0</span>
-            </div>
-            <div class="graph-bar-bg">
-              <div id="bar-medium" class="graph-bar" style="width: 0%;"></div>
-            </div>
-          </div>
-          <div class="graph-row low">
-            <div class="graph-label">
-              <span>Low</span>
-              <span id="count-low" class="graph-value">0</span>
-            </div>
-            <div class="graph-bar-bg">
-              <div id="bar-low" class="graph-bar" style="width: 0%;"></div>
-            </div>
-          </div>
-          <div class="graph-row resolved">
-            <div class="graph-label">
-              <span>Fixed</span>
-              <span id="count-resolved" class="graph-value">0</span>
-            </div>
-            <div class="graph-bar-bg">
-              <div id="bar-resolved" class="graph-bar" style="width: 0%;"></div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Findings List Section -->
-      <section class="card findings-card">
-        <div class="card-header">
-          <h2>Vulnerabilities Inventory</h2>
-          <div class="filters">
-            <button class="filter-btn active" data-filter="all">All</button>
-            <button class="filter-btn" data-filter="critical">Critical</button>
-            <button class="filter-btn" data-filter="high">High</button>
-            <button class="filter-btn" data-filter="medium">Medium</button>
-            <button class="filter-btn" data-filter="low">Low</button>
-          </div>
-        </div>
-        
-        <div class="findings-list" id="findings-container">
-          <div class="loading-placeholder">
-            <div class="spinner"></div>
-            <p>Querying security assessment data...</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- Details & Remediations Section -->
-      <section class="card details-card">
-        <div class="card-header">
-          <h2>Remediation Hub</h2>
-        </div>
-        <div id="remediation-placeholder" class="empty-state">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          <p>Select a vulnerability from the inventory list to generate Terraform or AWS CLI remediation scripts.</p>
-        </div>
-        <div id="remediation-content" class="hidden">
-          <div class="finding-details-header">
-            <span id="detail-severity" class="badge">CRITICAL</span>
-            <h3 id="detail-title">Public S3 Bucket</h3>
-            <p class="resource-id-wrap">Resource: <code id="detail-resource">s3::bucket/my-vulnerable-bucket</code></p>
-          </div>
-          
-          <div class="tabs">
-            <button class="tab-btn active" data-tab="explanation">Description</button>
-            <button class="tab-btn" data-tab="terraform">Terraform Fix</button>
-            <button class="tab-btn" data-tab="aws-cli">AWS CLI Fix</button>
-          </div>
-
-          <div class="tab-panels">
-            <div class="tab-panel active" id="panel-explanation">
-              <div class="detail-section">
-                <h4>Description</h4>
-                <p id="detail-desc"></p>
+          <div class="posture-display">
+            <div class="score-ring-container">
+              <svg class="score-ring" viewBox="0 0 120 120">
+                <circle class="ring-bg" cx="60" cy="60" r="50" />
+                <circle
+                  class="ring-fg"
+                  cx="60"
+                  cy="60"
+                  r="50"
+                  style="stroke-dasharray: 314; stroke-dashoffset: 314"
+                />
+              </svg>
+              <div class="score-text">
+                <span id="posture-score">0</span>
+                <span class="score-max">/100</span>
               </div>
-              <div class="detail-section grid-2">
-                <div>
-                  <h4>Technical Impact</h4>
-                  <p id="detail-tech-impact"></p>
+            </div>
+            <div class="grade-badge" id="posture-grade">-</div>
+          </div>
+
+          <div class="scan-meta">
+            <p><strong>Last Scanned:</strong> <span id="last-scan-time">Never</span></p>
+            <p><strong>Total Resources:</strong> <span id="resources-count">0</span></p>
+          </div>
+
+          <hr class="card-divider" />
+
+          <div class="stats-graph">
+            <div class="graph-row critical">
+              <div class="graph-label">
+                <span>Critical</span>
+                <span id="count-critical" class="graph-value">0</span>
+              </div>
+              <div class="graph-bar-bg">
+                <div id="bar-critical" class="graph-bar" style="width: 0%"></div>
+              </div>
+            </div>
+            <div class="graph-row high">
+              <div class="graph-label">
+                <span>High</span>
+                <span id="count-high" class="graph-value">0</span>
+              </div>
+              <div class="graph-bar-bg">
+                <div id="bar-high" class="graph-bar" style="width: 0%"></div>
+              </div>
+            </div>
+            <div class="graph-row medium">
+              <div class="graph-label">
+                <span>Medium</span>
+                <span id="count-medium" class="graph-value">0</span>
+              </div>
+              <div class="graph-bar-bg">
+                <div id="bar-medium" class="graph-bar" style="width: 0%"></div>
+              </div>
+            </div>
+            <div class="graph-row low">
+              <div class="graph-label">
+                <span>Low</span>
+                <span id="count-low" class="graph-value">0</span>
+              </div>
+              <div class="graph-bar-bg">
+                <div id="bar-low" class="graph-bar" style="width: 0%"></div>
+              </div>
+            </div>
+            <div class="graph-row resolved">
+              <div class="graph-label">
+                <span>Fixed</span>
+                <span id="count-resolved" class="graph-value">0</span>
+              </div>
+              <div class="graph-bar-bg">
+                <div id="bar-resolved" class="graph-bar" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Findings List Section -->
+        <section class="card findings-card">
+          <div class="card-header">
+            <h2>Vulnerabilities Inventory</h2>
+            <div class="filters">
+              <button class="filter-btn active" data-filter="all">All</button>
+              <button class="filter-btn" data-filter="critical">Critical</button>
+              <button class="filter-btn" data-filter="high">High</button>
+              <button class="filter-btn" data-filter="medium">Medium</button>
+              <button class="filter-btn" data-filter="low">Low</button>
+            </div>
+          </div>
+
+          <div class="findings-list" id="findings-container">
+            <div class="loading-placeholder">
+              <div class="spinner"></div>
+              <p>Querying security assessment data...</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Details & Remediations Section -->
+        <section class="card details-card">
+          <div class="card-header">
+            <h2>Remediation Hub</h2>
+          </div>
+          <div id="remediation-placeholder" class="empty-state">
+            <svg
+              width="48"
+              height="48"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+            <p>
+              Select a vulnerability from the inventory list to generate Terraform or AWS CLI
+              remediation scripts.
+            </p>
+          </div>
+          <div id="remediation-content" class="hidden">
+            <div class="finding-details-header">
+              <span id="detail-severity" class="badge">CRITICAL</span>
+              <h3 id="detail-title">Public S3 Bucket</h3>
+              <p class="resource-id-wrap">
+                Resource: <code id="detail-resource">s3::bucket/my-vulnerable-bucket</code>
+              </p>
+            </div>
+
+            <div class="tabs">
+              <button class="tab-btn active" data-tab="explanation">Description</button>
+              <button class="tab-btn" data-tab="terraform">Terraform Fix</button>
+              <button class="tab-btn" data-tab="aws-cli">AWS CLI Fix</button>
+            </div>
+
+            <div class="tab-panels">
+              <div class="tab-panel active" id="panel-explanation">
+                <div class="detail-section">
+                  <h4>Description</h4>
+                  <p id="detail-desc"></p>
                 </div>
-                <div>
-                  <h4>Business Impact</h4>
-                  <p id="detail-biz-impact"></p>
+                <div class="detail-section grid-2">
+                  <div>
+                    <h4>Technical Impact</h4>
+                    <p id="detail-tech-impact"></p>
+                  </div>
+                  <div>
+                    <h4>Business Impact</h4>
+                    <p id="detail-biz-impact"></p>
+                  </div>
+                </div>
+                <div class="detail-section">
+                  <h4>Attack Scenario</h4>
+                  <p id="detail-scenario" class="quote-box"></p>
+                </div>
+                <div class="detail-section">
+                  <h4>Best Practice</h4>
+                  <p id="detail-best-practice"></p>
                 </div>
               </div>
-              <div class="detail-section">
-                <h4>Attack Scenario</h4>
-                <p id="detail-scenario" class="quote-box"></p>
+
+              <div class="tab-panel" id="panel-terraform">
+                <div class="code-header">
+                  <span>terraform</span>
+                  <button class="copy-btn" id="copy-tf-btn">Copy</button>
+                </div>
+                <pre><code class="language-hcl" id="code-tf"></code></pre>
               </div>
-              <div class="detail-section">
-                <h4>Best Practice</h4>
-                <p id="detail-best-practice"></p>
+
+              <div class="tab-panel" id="panel-aws-cli">
+                <div class="code-header">
+                  <span>shell</span>
+                  <button class="copy-btn" id="copy-cli-btn">Copy</button>
+                </div>
+                <pre><code class="language-bash" id="code-cli"></code></pre>
               </div>
-            </div>
-            
-            <div class="tab-panel" id="panel-terraform">
-              <div class="code-header">
-                <span>terraform</span>
-                <button class="copy-btn" id="copy-tf-btn">Copy</button>
-              </div>
-              <pre><code class="language-hcl" id="code-tf"></code></pre>
-            </div>
-            
-            <div class="tab-panel" id="panel-aws-cli">
-              <div class="code-header">
-                <span>shell</span>
-                <button class="copy-btn" id="copy-cli-btn">Copy</button>
-              </div>
-              <pre><code class="language-bash" id="code-cli"></code></pre>
             </div>
           </div>
-        </div>
-      <!-- AI Security Analyst Chatbot Section -->
-      <section class="card chat-card">
-        <div class="card-header">
-          <h2>AI Security Analyst</h2>
-        </div>
-        <div class="chat-container">
-          <div class="chat-messages" id="chat-messages">
-            <div class="chat-message assistant">
-              <p>Hi, I am your MCPShield Security Analyst. I can help you scan the environment, explain findings, or apply remediations directly in LocalStack. Ask me anything!</p>
+        </section>
+        <!-- AI Security Analyst Chatbot Section -->
+        <section class="card chat-card">
+          <div class="card-header">
+            <h2>AI Security Analyst</h2>
+          </div>
+          <div class="chat-container">
+            <div class="chat-messages" id="chat-messages">
+              <div class="chat-message assistant">
+                <p>
+                  Hi, I am your MCPShield Security Analyst. I can help you scan the environment,
+                  explain findings, or apply remediations directly in LocalStack. Ask me anything!
+                </p>
+              </div>
+            </div>
+            <div class="chat-input-area">
+              <textarea
+                id="chat-input"
+                placeholder="Ask a question... (e.g. 'scan environment')"
+              ></textarea>
+              <button id="chat-send-btn" class="btn btn-primary">Send</button>
             </div>
           </div>
-          <div class="chat-input-area">
-            <textarea id="chat-input" placeholder="Ask a question... (e.g. 'scan environment')"></textarea>
-            <button id="chat-send-btn" class="btn btn-primary">Send</button>
-          </div>
-        </div>
-      </section>
-
-    </main>
-
-
-  </div>
-  <script src="app.js"></script>
-</body>
+        </section>
+      </main>
+    </div>
+    <script src="app.js"></script>
+  </body>
 </html>

@@ -28,11 +28,7 @@ import {
   GetQueueAttributesCommand,
   ListQueueTagsCommand,
 } from '@aws-sdk/client-sqs';
-import {
-  ListTopicsCommand,
-  ListTagsForResourceCommand as ListSnsTagsCommand,
-  GetTopicAttributesCommand,
-} from '@aws-sdk/client-sns';
+import { ListTopicsCommand, GetTopicAttributesCommand } from '@aws-sdk/client-sns';
 import { ListSecretsCommand } from '@aws-sdk/client-secrets-manager';
 import {
   DescribeParametersCommand,
@@ -481,11 +477,13 @@ export async function scanSNS(): Promise<ResourceSnapshot[]> {
       if (!t.TopicArn) continue;
       const parts = t.TopicArn.split(':');
       const topicName = parts[parts.length - 1] || t.TopicArn;
-      let tags: Record<string, string> = {};
+      const tags: Record<string, string> = {};
 
       let kmsKeyId = '';
       try {
-        const attrsRes = await snsClient.send(new GetTopicAttributesCommand({ TopicArn: t.TopicArn }));
+        const attrsRes = await snsClient.send(
+          new GetTopicAttributesCommand({ TopicArn: t.TopicArn }),
+        );
         kmsKeyId = attrsRes.Attributes?.KmsMasterKeyId || '';
       } catch (e: any) {
         logger.debug(`Error getting attributes for SNS topic ${topicName}: ${e.message}`);
@@ -690,7 +688,9 @@ export async function scanEnvironment(services?: AwsService[]): Promise<Resource
       logger.info(`Detected Environment Target: [AWS (Production / Real Cloud)]`);
     }
   } else {
-    logger.warn(`Could not confirm AWS API signature at ${endpoint}. Supported providers: AWS, LocalStack.`);
+    logger.warn(
+      `Could not confirm AWS API signature at ${endpoint}. Supported providers: AWS, LocalStack.`,
+    );
   }
 
   logger.info(`Starting scanning. Target services: ${services?.join(', ') || 'ALL'}`);
