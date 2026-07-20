@@ -21,7 +21,7 @@
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test"
   },
   "devDependencies": {
-    "@aws-sdk/client-cloudtrail": "^3.1085.0",
+    "@aws-sdk/client-cloudtrail": "^3.1091.0",
     "@aws-sdk/client-dynamodb": "^3.1085.0",
     "@aws-sdk/client-ec2": "^3.1085.0",
     "@aws-sdk/client-iam": "^3.1085.0",
