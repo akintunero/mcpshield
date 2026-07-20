@@ -10,7 +10,7 @@
 
 MCPShield is a security tool that scans cloud environments. If you discover a vulnerability in MCPShield itself (not in a scanned environment), please report it privately.
 
-**Do not open public issues.** Instead, email [akintunero@gmail.com](mailto:akintunero@gmail.com).
+**Do not open public issues.** Instead, email [akintunero101@gmail.com](mailto:akintunero101@gmail.com).
 
 Please include:
 - Description of the vulnerability

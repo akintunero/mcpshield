@@ -14,7 +14,7 @@ Examples of behavior that contributes to a positive environment:
 
 ## Enforcement
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the project maintainers at [akintunero@gmail.com](mailto:akintunero@gmail.com). All complaints will be reviewed and investigated.
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the project maintainers at [akintunero101@gmail.com](mailto:akintunero101@gmail.com). All complaints will be reviewed and investigated.
 
 ## Attribution
 
