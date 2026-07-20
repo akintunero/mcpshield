@@ -1,4 +1,4 @@
-FROM node:22-alpine
+FROM node:26-alpine
 RUN npm install -g pnpm@11.9.0
 WORKDIR /app
 COPY . .
