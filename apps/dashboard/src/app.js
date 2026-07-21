@@ -614,6 +614,16 @@ document.addEventListener('DOMContentLoaded', () => {
   bindCopy('copy-tf-btn', 'code-tf');
   bindCopy('copy-cli-btn', 'code-cli');
 
+  // Floating Chat Toggle
+  const chatToggleBtn = document.getElementById('chat-toggle-btn');
+  const chatWidget = document.getElementById('chat-widget');
+  const chatCloseBtn = document.getElementById('chat-close-btn');
+  chatToggleBtn.addEventListener('click', () => {
+    chatWidget.classList.toggle('hidden');
+    if (!chatWidget.classList.contains('hidden')) chatInput.focus();
+  });
+  chatCloseBtn.addEventListener('click', () => chatWidget.classList.add('hidden'));
+
   // AI Security Analyst Chatbot Implementation
   let chatHistory = [];
   const chatSendBtn = document.getElementById('chat-send-btn');

@@ -228,30 +228,30 @@
             </div>
           </div>
         </section>
-        <!-- AI Security Analyst Chatbot Section -->
-        <section class="card chat-card">
-          <div class="card-header">
-            <h2>AI Security Analyst</h2>
-          </div>
-          <div class="chat-container">
-            <div class="chat-messages" id="chat-messages">
-              <div class="chat-message assistant">
-                <p>
-                  Hi, I am your MCPShield Security Analyst. I can help you scan the environment,
-                  explain findings, or apply remediations directly in LocalStack. Ask me anything!
-                </p>
-              </div>
-            </div>
-            <div class="chat-input-area">
-              <textarea
-                id="chat-input"
-                placeholder="Ask a question... (e.g. 'scan environment')"
-              ></textarea>
-              <button id="chat-send-btn" class="btn btn-primary">Send</button>
-            </div>
-          </div>
-        </section>
       </main>
+
+      <!-- Floating Chat Button & Widget -->
+      <button id="chat-toggle-btn" class="chat-toggle-btn" aria-label="Toggle chat">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+      </button>
+
+      <div id="chat-widget" class="chat-widget hidden">
+        <div class="chat-widget-header">
+          <span>AI Security Analyst</span>
+          <button id="chat-close-btn" class="chat-close-btn">&times;</button>
+        </div>
+        <div class="chat-widget-messages" id="chat-messages">
+          <div class="chat-message assistant">
+            <p>Hi, I am your MCPShield Security Analyst. Ask me anything about your security posture!</p>
+          </div>
+        </div>
+        <div class="chat-widget-input-area">
+          <textarea id="chat-input" placeholder="Type a message..." rows="1"></textarea>
+          <button id="chat-send-btn" class="btn btn-primary">Send</button>
+        </div>
+      </div>
     </div>
     <script src="app.js"></script>
   </body>
