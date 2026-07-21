@@ -1,9 +1,10 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import fastifyStatic from '@fastify/static';
+import rateLimit from '@fastify/rate-limit';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 import { getConfig } from '@mcpshield/config';
 import { createLogger } from '@mcpshield/logger';
@@ -16,10 +17,75 @@ const logger = createLogger('api:main');
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Basic Prometheus metrics
+const metrics = {
+  requestsTotal: 0,
+  requestsByPath: {} as Record<string, number>,
+  errorsTotal: 0,
+  startTime: Date.now(),
+};
+
+function metricsText(): string {
+  const uptime = (Date.now() - metrics.startTime) / 1000;
+  return [
+    '# HELP mcpshield_requests_total Total HTTP requests',
+    '# TYPE mcpshield_requests_total counter',
+    `mcpshield_requests_total ${metrics.requestsTotal}`,
+    '',
+    '# HELP mcpshield_errors_total Total HTTP errors',
+    '# TYPE mcpshield_errors_total counter',
+    `mcpshield_errors_total ${metrics.errorsTotal}`,
+    '',
+    '# HELP mcpshield_uptime_seconds Server uptime in seconds',
+    '# TYPE mcpshield_uptime_seconds gauge',
+    `mcpshield_uptime_seconds ${uptime}`,
+  ].join('\n');
+}
+
 async function main() {
   const config = getConfig();
+
+  // TLS config
+  const httpsOpts: { key?: string; cert?: string } = {};
+  if (config.security.tlsKeyPath && config.security.tlsCertPath) {
+    try {
+      httpsOpts.key = readFileSync(config.security.tlsKeyPath, 'utf8');
+      httpsOpts.cert = readFileSync(config.security.tlsCertPath, 'utf8');
+      logger.info('TLS enabled');
+    } catch (err: any) {
+      logger.warn(`Failed to load TLS certificates: ${err.message}. Falling back to HTTP.`);
+    }
+  }
+
   const fastify = Fastify({ logger: false });
+
+  // Enable HTTPS if TLS config is provided
+  if (httpsOpts.key && httpsOpts.cert) {
+    // @ts-expect-error: Fastify v5 supports https via this property
+    fastify.https = httpsOpts;
+  }
+
   await fastify.register(cors, { origin: '*' });
+  await fastify.register(rateLimit, { max: config.security.rateLimitMax, timeWindow: '1 minute' });
+
+  // API key auth middleware
+  fastify.addHook('preHandler', async (request, reply) => {
+    metrics.requestsTotal++;
+    metrics.requestsByPath[request.url] = (metrics.requestsByPath[request.url] || 0) + 1;
+
+    // Skip auth for health and metrics endpoints
+    if (request.url === '/health' || request.url === '/metrics') return;
+
+    if (config.security.apiKey) {
+      const auth = request.headers.authorization;
+      if (!auth || !auth.startsWith('Bearer ') || auth.slice(7) !== config.security.apiKey) {
+        metrics.errorsTotal++;
+        return reply
+          .status(401)
+          .send({ error: 'Unauthorized. Provide API_KEY via Authorization: Bearer <key> header.' });
+      }
+    }
+  });
 
   // 1. REST API endpoints
   fastify.get('/health', async () => {
@@ -31,16 +97,26 @@ async function main() {
     };
   });
 
-  fastify.get('/api/state', async () => {
-    const state = await readState();
-    const score = computeSecurityScore(state.allFindings);
-    return {
-      score,
-      lastScan: state.lastScan,
-      findings: state.allFindings,
-      approvals: Object.values(state.approvals),
-      remediations: state.remediationResults,
-    };
+  fastify.get('/metrics', async (_request, reply) => {
+    return reply.type('text/plain').send(metricsText());
+  });
+
+  fastify.get('/api/state', async (request, reply) => {
+    try {
+      const state = await readState();
+      const score = computeSecurityScore(state.allFindings);
+      return {
+        score,
+        lastScan: state.lastScan,
+        findings: state.allFindings,
+        approvals: Object.values(state.approvals),
+        remediations: state.remediationResults,
+      };
+    } catch (err: any) {
+      metrics.errorsTotal++;
+      logger.error(`Error reading state: ${err.message}`);
+      return reply.status(500).send({ error: 'Failed to read state.' });
+    }
   });
 
   fastify.post('/api/scan', async (request, reply) => {
@@ -62,6 +138,7 @@ async function main() {
         } catch {}
       }
     } catch (err: any) {
+      metrics.errorsTotal++;
       logger.error(`Error in /api/scan: ${err.message}`, err);
       return reply.status(500).send({ error: err.message });
     }
@@ -78,11 +155,9 @@ async function main() {
       mcpClient = await createMcpClient();
       const llmProvider = getLlmProvider();
 
-      // Retrieve available tools from MCP server
       const toolsRes = await mcpClient.listTools();
       const mcpTools = toolsRes.tools;
 
-      // Construct LLM message history
       const formattedHistory = (history || []).map((h: any) => ({
         role: h.role === 'user' ? 'user' : 'assistant',
         content: h.content,
@@ -110,7 +185,6 @@ Provide professional, concise responses.`,
         })),
       });
 
-      // Simple agent execution loop: if the LLM requests a tool call, execute it and call it back
       if (completion.toolCalls && completion.toolCalls.length > 0) {
         messages.push({
           role: 'assistant',
@@ -119,9 +193,7 @@ Provide professional, concise responses.`,
         } as any);
 
         for (const tc of completion.toolCalls) {
-          logger.info(
-            `Dashboard Chatbot invoking tool: ${tc.name} with args: ${JSON.stringify(tc.arguments)}`,
-          );
+          logger.info(`Dashboard Chatbot invoking tool: ${tc.name}`);
           const toolResult = await mcpClient.callTool({
             name: tc.name,
             arguments: tc.arguments as any,
@@ -136,16 +208,12 @@ Provide professional, concise responses.`,
           } as any);
         }
 
-        // Call the LLM provider again with tool execution output
-        completion = await llmProvider.complete({
-          messages: messages as any,
-        });
+        completion = await llmProvider.complete({ messages: messages as any });
       }
 
-      return {
-        content: completion.content,
-      };
+      return { content: completion.content };
     } catch (err: any) {
+      metrics.errorsTotal++;
       logger.error(`Error in /api/chat: ${err.message}`, err);
       return reply.status(500).send({ error: err.message });
     } finally {
@@ -167,7 +235,6 @@ Provide professional, concise responses.`,
       wildcard: true,
     });
 
-    // Support HTML5 History API for SPA navigation routing
     fastify.setNotFoundHandler(async (request, reply) => {
       return reply.sendFile('index.html');
     });
@@ -179,16 +246,24 @@ Provide professional, concise responses.`,
       return {
         message:
           'MCPShield API Server running. Dashboard not built yet. Run `pnpm build` at the root directory to enable the dashboard.',
-        endpoints: {
-          health: '/health',
-          state: '/api/state',
-        },
+        endpoints: { health: '/health', state: '/api/state', metrics: '/metrics' },
       };
     });
   }
 
+  // Graceful shutdown
+  const stop = async (signal: string) => {
+    logger.info(`Received ${signal}. Shutting down gracefully...`);
+    await fastify.close();
+    logger.info('Server closed.');
+    process.exit(0);
+  };
+  process.on('SIGTERM', () => stop('SIGTERM'));
+  process.on('SIGINT', () => stop('SIGINT'));
+
+  const proto = httpsOpts.key ? 'https' : 'http';
   await fastify.listen({ host: config.api.host, port: config.api.port });
-  logger.info(`REST API Server running at http://${config.api.host}:${config.api.port}`);
+  logger.info(`REST API Server running at ${proto}://${config.api.host}:${config.api.port}`);
 }
 
 main().catch((err) => {

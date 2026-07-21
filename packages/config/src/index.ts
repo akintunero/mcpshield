@@ -65,6 +65,15 @@ export const EnvSchema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_MODEL: z.string().default('gpt-4o-mini'),
 
+  // Security
+  API_KEY: z.string().optional(),
+  RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
+  TLS_KEY_PATH: z.string().optional(),
+  TLS_CERT_PATH: z.string().optional(),
+
+  // State management
+  STATE_BACKUP_COUNT: z.coerce.number().int().min(0).default(5),
+
   // n8n
   N8N_PORT: port(5678),
 });
@@ -105,6 +114,13 @@ export interface AppConfig {
     gemini: { apiKey?: string; model: string };
     openai: { baseUrl: string; apiKey?: string; model: string };
   };
+  security: {
+    apiKey?: string;
+    rateLimitMax: number;
+    tlsKeyPath?: string;
+    tlsCertPath?: string;
+  };
+  stateBackupCount: number;
   n8n: { port: number };
 }
 
@@ -163,6 +179,13 @@ function shape(env: Env): AppConfig {
         model: env.OPENAI_MODEL,
       },
     },
+    security: {
+      apiKey: env.API_KEY,
+      rateLimitMax: env.RATE_LIMIT_MAX,
+      tlsKeyPath: env.TLS_KEY_PATH,
+      tlsCertPath: env.TLS_CERT_PATH,
+    },
+    stateBackupCount: env.STATE_BACKUP_COUNT,
     n8n: { port: env.N8N_PORT },
   };
 }

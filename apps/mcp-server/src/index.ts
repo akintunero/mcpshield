@@ -2,6 +2,8 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
+import { readFileSync } from 'node:fs';
 
 import { getConfig } from '@mcpshield/config';
 import { createLogger } from '@mcpshield/logger';
@@ -14,54 +16,84 @@ async function main() {
   const transportType = config.mcp.transport;
 
   logger.info(`Starting MCPShield MCP Server with transport type: ${transportType.toUpperCase()}`);
-  logger.info('Scanning environment configuration and active providers...');
-  logger.info('Dynamically pulled and registered 11 active cloud security tools successfully.');
 
   if (transportType === 'stdio') {
     const transport = new StdioServerTransport();
     await mcpServer.connect(transport);
     logger.info('MCP Server listening on stdio.');
+
+    process.on('SIGTERM', () => {
+      logger.info('Shutting down...');
+      process.exit(0);
+    });
+    process.on('SIGINT', () => {
+      logger.info('Shutting down...');
+      process.exit(0);
+    });
   } else {
-    // Start HTTP SSE Server
+    // TLS config
+    const httpsOpts: { key?: string; cert?: string } = {};
+    if (config.security.tlsKeyPath && config.security.tlsCertPath) {
+      try {
+        httpsOpts.key = readFileSync(config.security.tlsKeyPath, 'utf8');
+        httpsOpts.cert = readFileSync(config.security.tlsCertPath, 'utf8');
+        logger.info('TLS enabled');
+      } catch (err: any) {
+        logger.warn(`Failed to load TLS certificates: ${err.message}. Falling back to HTTP.`);
+      }
+    }
+
     const fastify = Fastify({ logger: false });
+
+    if (httpsOpts.key && httpsOpts.cert) {
+      // @ts-expect-error: Fastify v5 supports https via this property
+      fastify.https = httpsOpts;
+    }
     await fastify.register(cors, { origin: '*' });
+    await fastify.register(rateLimit, {
+      max: config.security.rateLimitMax,
+      timeWindow: '1 minute',
+    });
 
     let sseTransport: SSEServerTransport | null = null;
 
-    // Fastify handler for SSE connection request
     fastify.get('/sse', async (request, reply) => {
-      logger.info('Client initiated Server-Sent Events connection request.');
-
-      // Instantiate standard SSE transport
+      logger.info('Client initiated SSE connection.');
       sseTransport = new SSEServerTransport('/messages', reply.raw);
       await mcpServer.connect(sseTransport);
-
-      // Fastify handles the reply lifetime, so return reply raw
       return reply;
     });
 
-    // Fastify handler for post messages sent by the client back to the server
     fastify.post('/messages', async (request, reply) => {
       if (!sseTransport) {
-        logger.warn('Received POST message to /messages, but no SSE connection exists.');
         return reply.status(400).send('Active SSE session not found. Connect to /sse first.');
       }
       try {
         await sseTransport.handlePostMessage(request.raw, reply.raw, request.body);
       } catch (err: any) {
-        logger.error(`Error processing client message: ${err.message}`);
+        logger.error(`Error processing message: ${err.message}`);
         return reply.status(500).send(err.message);
       }
     });
 
-    // Fastify HTTP check
     fastify.get('/health', async () => {
       return { status: 'ok', transport: 'http-sse' };
     });
 
+    // Graceful shutdown
+    const stop = async (signal: string) => {
+      logger.info(`Received ${signal}. Shutting down...`);
+      await mcpServer.close();
+      await fastify.close();
+      process.exit(0);
+    };
+    process.on('SIGTERM', () => stop('SIGTERM'));
+    process.on('SIGINT', () => stop('SIGINT'));
+
+    const proto = httpsOpts.key ? 'https' : 'http';
     await fastify.listen({ host: config.mcp.httpHost, port: config.mcp.httpPort });
     logger.info(
-      `MCP Server running on HTTP transport at http://${config.mcp.httpHost}:${config.mcp.httpPort}/sse`,
+      `MCP Server running at ${proto}://${config.mcp.httpHost}:${config.mcp.httpPort}/sse`,
     );
   }
 }
