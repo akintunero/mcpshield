@@ -16,7 +16,9 @@ coverage/
 .env.local
 .env.*.local
 
-# Workshop materials (not part of open-source project)
+# Personal materials (not part of open-source project)
+mcpshield.pptx
+STUDY_GUIDE.*
 WORKSHOP.md
 labs/
 oau-ife.md
