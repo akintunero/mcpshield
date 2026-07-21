@@ -1,95 +1,124 @@
-# MCPShield System Architecture Log
+# MCPShield System Architecture
 
-This document provides a comprehensive analysis of the architectural design, directory mappings, communication flow, and security design boundaries of MCPShield.
+## 1. System Topology
 
----
-
-## 1. System Topology Overview
-
-MCPShield is structured as a TypeScript monorepo containing decoupled packages (core logic layers) and independent application nodes (runtimes).
-
-The following Mermaid diagram visualizes the communication paths and runtime topology:
+MCPShield is a TypeScript monorepo with decoupled packages and independent application nodes.
 
 ```mermaid
-graph TD
-    %% Clients
-    Slack[Slack Workspace Bolt Bot]
-    UI[HTML5 Dashboard UI SPA]
+graph TB
+    %% Users
+    User1["👤 Slack User"]
+    User2["👤 Browser User"]
 
-    %% Main Application Nodes
-    Agent[Agent Daemon - apps/agent]
-    API[REST API Server - apps/api]
-    MCPServer[MCP Server - apps/mcp-server]
+    %% Interfaces
+    Slack["💬 Slack Bot (Socket Mode)"]
+    UI["🌐 Dashboard SPA"]
 
-    %% Infrastructure & Target
-    LocalStack[LocalStack Mock AWS - localhost:4566]
-    StateFS[(Persistent State - state.json)]
+    %% Services
+    Agent["🤖 AI Security Analyst<br/>apps/agent"]
+    API["🔌 REST API Server<br/>apps/api · Port 7802"]
+    MCPServer["⚙️ MCP Server<br/>apps/mcp-server · Port 7801"]
 
-    %% Connections
-    Slack <-->|Socket Mode| Agent
-    UI <-->|HTTP REST / SSE| API
-    Agent <-->|MCP Client SSE Protocol| MCPServer
-    API <-->|Reads Cache| StateFS
-    MCPServer <-->|Writes State / Reads State| StateFS
-    MCPServer -->|SDK List/Describe| LocalStack
-    MCPServer -->|SDK Mutative Actions| LocalStack
+    %% Packages
+    Scanner["🔍 Scanner + Security Engine<br/>21 rules · MITRE + CIS"]
+    Score["📊 Scoring Engine<br/>0–100 · A–F"]
+    Generators["📝 Code Generators<br/>Terraform · CLI · Reports"]
+    CloudTools["☁️ AWS SDK Layer"]
+
+    %% State
+    StateFS["💾 State JSON<br/>+ backup rotation"]
+
+    %% Cloud
+    Cloud["☁️ AWS / LocalStack"]
+
+    %% Flows
+    User1 -->|"@Shield commands"| Slack
+    User2 -->|"HTTP (port 7802)"| UI
+    Slack -->|"MCP Protocol"| MCPServer
+    UI -->|"REST API"| API
+    API -->|"MCP Client"| MCPServer
+
+    MCPServer --> Scanner
+    MCPServer --> Score
+    MCPServer --> Generators
+    Scanner --> CloudTools
+    CloudTools --> Cloud
+
+    MCPServer <-->|"state.json"| StateFS
+    API -.->|"read-only"| StateFS
 ```
 
----
+> **Security Boundary:** The AI agent NEVER communicates directly with the cloud. All operations go through MCP tools with human-in-the-loop approval for writes.
 
-## 2. Directory Structure Mappings
+## 2. Production Features
 
-```text
-mcpshield/
-├── apps/
-│   ├── agent/                 # Slack Socket Mode Bot Agent
-│   ├── api/                   # REST API Server serving dashboard static assets
-│   ├── dashboard/             # Pure SPA Dashboard Source (dist/ holds served SPA)
-│   └── mcp-server/            # Fastify SSE & Stdio Model Context Protocol Server
-├── packages/
-│   ├── aws-tools/             # SDK client instantiations & raw resource scanner
-│   ├── security-engine/       # Rule compliance checker evaluating raw snapshots
-│   ├── scoring-engine/        # Security score and grade calculator
-│   ├── terraform-generator/   # Terraform catalog fixing block compilations
-│   ├── aws-cli-generator/     # AWS CLI catalog command compilation
-│   ├── report-generator/      # Executive markdown report formatting
-│   ├── types/                 # Shared domain types
-│   ├── shared/                # Core utilities (shortId, nowIso)
-│   ├── logger/                # Pino logger wrapper
-│   └── config/                # Environment variable schemas & loaders
-├── scripts/
-│   ├── bootstrap.sh           # macOS & Linux bootstrap check & provisioning launcher
-│   ├── bootstrap.ps1          # Windows PowerShell bootstrap check & provisioning launcher
-│   └── provision.ts           # Indempotent AWS target environment provisioning
-└── docker-compose.yml         # Container orchestration system
+| Feature | Implementation |
+|---------|---------------|
+| **API Auth** | Bearer token via `API_KEY` env var. Optional — disabled when unset (dev mode) |
+| **Rate Limiting** | `@fastify/rate-limit` — configurable via `RATE_LIMIT_MAX` (default 100/min) |
+| **TLS/SSL** | Optional via `TLS_KEY_PATH` + `TLS_CERT_PATH` |
+| **Metrics** | Prometheus-style `/metrics` endpoint (requests, errors, uptime) |
+| **Graceful Shutdown** | SIGTERM/SIGINT handlers close servers cleanly |
+| **State Backups** | Rotating backups of `state.json` (configurable count) |
+
+## 3. Dashboard Layout
+
+The dashboard is a 3-column SPA:
+
+```
+┌────────┬──────────────────┬──────────────────┐
+│ Posture│   Findings       │   Remediation    │
+│ Score  │   Inventory      │   Hub            │
+│        │                  │                  │
+│ Ring   │ 🔴 Critical (2) │ Description      │
+│ Grade  │ 🟠 High   (4)   │ Technical Impact │
+│        │ 🟡 Medium (3)   │ Attack Scenario  │
+│ Bars   │ 🔵 Low    (5)   │ ┌─┬─┬─┐          │
+│        │                 │ │D│T│C│  Tabs    │
+│        │                 │ └─┴─┴─┘          │
+└────────┴──────────────────┴──────────────────┘
+
+💬 Floating Chat (bottom-right corner)
 ```
 
----
+- **Posture Card** — Score ring, letter grade, severity bar graph, scan metadata
+- **Findings List** — Filterable by severity, click to select
+- **Remediation Hub** — Detail view with tabs (Description, Terraform Fix, AWS CLI Fix)
+- **Chat Widget** — Floating button, popup overlay, AI analyst conversation
 
-## 3. Human-In-The-Loop Security Boundaries
+## 4. Human-in-the-Loop Security Boundaries
 
-A primary design constraint of MCPShield is enforcing strict **least-privilege operations**:
-1. **Separation of Scan and Fix:** The scanning process is passive and completely read-only.
-2. **Approval Registry:** When a remediation action is triggered (e.g. `@Shield fix finding <id>`), the MCP server compiles the fix and creates a pending approval record in the state JSON. It does NOT mutate the AWS environment.
-3. **Explicit Token Execution:** An environment mutation occurs ONLY when a client issues an `execute_remediation` tool call containing a valid `approvalId` that corresponds to an approved registry record.
-4. **Local Audit Log:** Every executed remediation updates the score and registers an entry in the persistent remediation result audit log, which is rendered dynamically in the dashboard.
+1. **Separation of Scan and Fix** — Scanning is read-only
+2. **Approval Registry** — Remediation creates a pending approval record. Does NOT mutate AWS
+3. **Explicit Token Execution** — Mutations happen only with a valid `approvalId`
+4. **Audit Log** — Every remediation is logged with approver identity and timestamp
 
----
+## 5. MCP Tools Catalog
 
-## 4. MCP Tools Catalog Reference
+| Tool | Params | Purpose |
+|------|--------|---------|
+| `scan_environment` | `services?` | Scan AWS services for misconfigurations |
+| `list_findings` | `severity?`, `service?` | List detected findings |
+| `describe_finding` | `findingId` | Full finding details with MITRE/CIS mapping |
+| `generate_terraform_fix` | `findingId` | Generate Terraform HCL remediation |
+| `generate_cli_fix` | `findingId` | Generate AWS CLI remediation |
+| `approve_remediation` | `findingIds`, `approvedBy` | Create approval for fixes |
+| `execute_remediation` | `approvalId` | Apply approved fixes to cloud |
+| `rescan_environment` | – | Re-scan after remediation |
+| `security_score` | – | Compute current posture score (0–100) |
+| `generate_report` | – | Generate executive Markdown report |
+| `health` | – | Server + cloud connectivity check |
 
-The MCP Server exposes the following standard tool methods:
+## 6. State Persistence
 
-| Tool Name | Parameters Schema | Returns | Purpose |
-|---|---|---|---|
-| `scan_environment` | `services?: AwsService[]` | `ScanResult` | Queries AWS APIs and runs rule validations. |
-| `list_findings` | `severity?: Severity` | `ListFindingsResult` | Retrieves open findings from cache. |
-| `describe_finding` | `findingId: string` | `FindingDetail` | Returns deep finding schema & rules metadata. |
-| `generate_terraform_fix`| `findingId: string` | `FixResponse` | Compiles HCL block to remediate finding. |
-| `generate_cli_fix` | `findingId: string` | `FixResponse` | Compiles shell command to remediate finding. |
-| `approve_remediation` | `findingIds: string[]`, `approvedBy: string`, `note?: string` | `Approval` | Registers an authorization record. |
-| `execute_remediation` | `approvalId: string` | `RemediationRunResult` | Applies mutative SDK remediations. |
-| `rescan_environment` | - | `ScanResult` | Performs delta check to confirm resolutions. |
-| `security_score` | - | `ScoreResult` | Returns current letter grade & percentage. |
-| `generate_report` | - | `ReportResult` | Compiles Executive Summary Markdown. |
-| `health` | - | `HealthResponse` | Evaluates LocalStack connectivity & server stats. |
+State is stored as JSON with automatic backup rotation:
+
+```
+.mcpshield-state/
+├── state.json              # Current state
+├── state-2026-07-20T10-00-00-000Z.bak  # Backup 1
+├── state-2026-07-20T09-55-00-000Z.bak  # Backup 2
+└── ...
+```
+
+The API reads state **read-only**. The MCP server owns writes. This prevents file collision.

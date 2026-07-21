@@ -4,8 +4,8 @@
 
 - **Node.js** >= 22 (see `.nvmrc`)
 - **pnpm** >= 9 (`npm install -g pnpm@11.9.0`)
-- **Docker Desktop** (for running MCPShield containers)
-- **LocalStack** (installed locally, not started by Docker Compose)
+- **Docker Desktop** (for Docker deployment)
+- **LocalStack** or an AWS endpoint
 - **AWS CLI v2** (optional but recommended)
 
 ## Quick Install
@@ -28,7 +28,34 @@ pnpm build
 cp .env.example .env
 ```
 
-Edit `.env` with your Slack credentials and LLM provider API key. See [.env.example](../.env.example) for all available options.
+Edit `.env` with your credentials. Key variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LOCALSTACK_ENDPOINT` | `http://localhost:4566` | AWS endpoint to scan |
+| `LLM_PROVIDER` | `nim` | LLM backend (nim, ollama, gemini) |
+| `NIM_API_KEY` | – | NVIDIA NIM API key |
+| `SLACK_BOT_TOKEN` | – | Slack bot token |
+| `API_KEY` | (empty) | REST API auth key. Clients send `Authorization: Bearer <key>`. Empty = no auth (dev) |
+| `RATE_LIMIT_MAX` | `100` | Max requests/min per IP |
+| `TLS_KEY_PATH` | – | TLS key file path (enables HTTPS) |
+| `TLS_CERT_PATH` | – | TLS cert file path |
+| `STATE_BACKUP_COUNT` | `5` | State file backups to retain |
+
+## Run (Local Development)
+
+```bash
+# Terminal 1 — MCP Server (port 7801)
+pnpm --filter @mcpshield/mcp-server dev
+
+# Terminal 2 — API + Dashboard (port 7802)
+pnpm --filter @mcpshield/api dev
+
+# Terminal 3 (optional) — Slack Agent
+pnpm --filter @mcpshield/agent dev
+```
+
+Open the dashboard at **http://localhost:7802**.
 
 ## Docker Deployment
 
@@ -37,10 +64,10 @@ docker compose up --build
 ```
 
 This starts:
+- `localstack` on port 4566 (auto-provisions demo resources)
 - `mcp-server` on port 7801
 - `api` on port 7802 (serves dashboard + REST API)
 - `agent` (Slack bot daemon)
-- `n8n` on port 5678 (optional workflow automation)
 
 ## Verify Installation
 
@@ -50,4 +77,7 @@ curl http://localhost:7801/health
 
 # Check API health
 curl http://localhost:7802/health
+
+# Prometheus metrics
+curl http://localhost:7802/metrics
 ```
