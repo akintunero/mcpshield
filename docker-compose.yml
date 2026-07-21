@@ -15,7 +15,11 @@ services:
       - AWS_SECRET_ACCESS_KEY=test
       - AWS_DEFAULT_REGION=us-east-1
     healthcheck:
-      test: ['CMD-SHELL', 'curl -sf http://localhost:4566/_localstack/health > /dev/null 2>&1 && aws --endpoint-url=http://localhost:4566 s3 ls > /dev/null 2>&1 || exit 1']
+      test:
+        [
+          'CMD-SHELL',
+          'curl -sf http://localhost:4566/_localstack/health > /dev/null 2>&1 && aws --endpoint-url=http://localhost:4566 s3 ls > /dev/null 2>&1 || exit 1',
+        ]
       interval: 10s
       timeout: 5s
       retries: 15
