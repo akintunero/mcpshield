@@ -11,7 +11,7 @@ An Architecture Decision Record is a short document capturing an important archi
 | ADR | Title | Status |
 |---|---|---|
 | [ADR-001](./adr-001-mcp-protocol.md) | Why Model Context Protocol | Accepted |
-| [ADR-002](./adr-002-localstack.md) | Why LocalStack for Workshop | Accepted |
+| ADR-002 | Why LocalStack for Workshop | Local Only |
 | [ADR-003](./adr-003-slack.md) | Why Slack as the Interface | Accepted |
 | [ADR-004](./adr-004-human-approval.md) | Why Human-in-the-Loop Approval | Accepted |
 | [ADR-005](./adr-005-plugin-architecture.md) | Why Plugin-Based Provider Architecture | Accepted |

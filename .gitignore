@@ -44,3 +44,11 @@ pnpm-debug.log*
 !.vscode/settings.json
 Thumbs.db
 /mcpshield-localstack-bootstrap/
+
+# Local-only files
+/adr/adr-002-localstack.md
+/docs/localstack-guide.md
+/docs/localstack-guide.pdf
+/docs/localstack.md
+/scripts/localstack-init/
+/presentations/
