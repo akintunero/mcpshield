@@ -25,19 +25,6 @@ import type {
 
 const logger = createLogger('mcp-server:server');
 
-// Instantiate the MCP Server
-export const mcpServer = new Server(
-  {
-    name: 'mcpshield-mcp-server',
-    version: '1.0.0',
-  },
-  {
-    capabilities: {
-      tools: {},
-    },
-  },
-);
-
 /** Helper to group resource snapshots by service for count report */
 function groupByService(snapshots: any[]): Record<string, number> {
   const counts: Record<string, number> = {};
@@ -247,8 +234,22 @@ function mapFindingToRemediation(finding: Finding): RemediationAction | null {
   return null;
 }
 
+/** Create a new MCP Server instance with all tool handlers registered. */
+export function createMcpServer(): Server {
+  const mcpServer = new Server(
+    {
+      name: 'mcpshield-mcp-server',
+      version: '1.0.0',
+    },
+    {
+      capabilities: {
+        tools: {},
+      },
+    },
+  );
+
 // 1. Declare available tools to the MCP client (LLM Agent)
-mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
+  mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
   logger.info('Received ListToolsRequest from MCP client.');
   return {
     tools: [
@@ -492,7 +493,7 @@ function resolveFinding(findingId: string, allFindings: Finding[]): Finding | un
 }
 
 // 2. Handle Tool Executions
-mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
+  mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
   logger.info(`Received CallToolRequest for tool: ${name}`);
 
@@ -788,4 +789,7 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
       content: [{ type: 'text', text: JSON.stringify({ error: err.message }, null, 2) }],
     };
   }
-});
+  });
+
+  return mcpServer;
+}

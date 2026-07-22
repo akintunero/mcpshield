@@ -62,19 +62,27 @@ export async function loadState(): Promise<McpState> {
   }
 }
 
+/** Serialize writes so concurrent MCP sessions do not clobber state.json. */
+let writeChain: Promise<void> = Promise.resolve();
+
 /**
  * Commits the current state to the local disk with backup rotation.
+ * Single-host only — not multi-replica safe (use a shared store for HA).
  */
 export async function saveState(state: McpState): Promise<void> {
   cachedState = state;
-  const config = getConfig();
-  const path = getStateFilePath();
-  const dir = config.mcp.stateDir;
-  try {
-    await fs.mkdir(dir, { recursive: true });
-    await fs.writeFile(path, JSON.stringify(state, null, 2), 'utf8');
-    await rotateBackups(dir, config.stateBackupCount);
-  } catch (err: any) {
-    logger.error(`Error writing state file: ${err.message}`);
-  }
+  const run = async () => {
+    const config = getConfig();
+    const path = getStateFilePath();
+    const dir = config.mcp.stateDir;
+    try {
+      await fs.mkdir(dir, { recursive: true });
+      await fs.writeFile(path, JSON.stringify(state, null, 2), 'utf8');
+      await rotateBackups(dir, config.stateBackupCount);
+    } catch (err: any) {
+      logger.error(`Error writing state file: ${err.message}`);
+    }
+  };
+  writeChain = writeChain.then(run, run);
+  await writeChain;
 }

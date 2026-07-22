@@ -670,13 +670,15 @@ export async function scanEnvironment(services?: AwsService[]): Promise<Resource
   try {
     await s3Client.send(new ListBucketsCommand({}));
     isAWS = true;
-    try {
-      const controller = new AbortController();
-      const id = setTimeout(() => controller.abort(), 1500);
-      const res = await fetch(`${endpoint}/_localstack/health`, { signal: controller.signal });
-      clearTimeout(id);
-      if (res.ok) isLocalStack = true;
-    } catch {}
+    if (endpoint) {
+      try {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), 1500);
+        const res = await fetch(`${endpoint}/_localstack/health`, { signal: controller.signal });
+        clearTimeout(id);
+        if (res.ok) isLocalStack = true;
+      } catch {}
+    }
   } catch (e: any) {
     logger.debug(`AWS API probe failed: ${e.message}`);
   }

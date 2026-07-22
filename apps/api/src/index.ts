@@ -5,6 +5,7 @@ import rateLimit from '@fastify/rate-limit';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { existsSync, readFileSync } from 'node:fs';
+import { timingSafeEqual } from 'node:crypto';
 
 import { getConfig } from '@mcpshield/config';
 import { createLogger } from '@mcpshield/logger';
@@ -17,7 +18,6 @@ const logger = createLogger('api:main');
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Basic Prometheus metrics
 const metrics = {
   requestsTotal: 0,
   requestsByPath: {} as Record<string, number>,
@@ -42,43 +42,67 @@ function metricsText(): string {
   ].join('\n');
 }
 
+function parseCorsOrigins(raw: string): boolean | string | string[] {
+  if (!raw || raw.trim() === '' || raw.trim() === '*') return true;
+  const list = raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (list.length === 0) return true;
+  if (list.length === 1) return list[0]!;
+  return list;
+}
+
+function bearerMatches(header: string | undefined, expected: string): boolean {
+  if (!header || !header.startsWith('Bearer ')) return false;
+  const token = header.slice(7);
+  try {
+    const a = Buffer.from(token);
+    const b = Buffer.from(expected);
+    if (a.length !== b.length) return false;
+    return timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
+function isPublicPath(url: string): boolean {
+  if (url === '/health' || url === '/metrics' || url === '/api/config') return true;
+  if (url.startsWith('/api/')) return false;
+  // Static dashboard assets
+  return true;
+}
+
 async function main() {
   const config = getConfig();
 
-  // TLS config
-  const httpsOpts: { key?: string; cert?: string } = {};
+  const httpsOpts: { key?: Buffer; cert?: Buffer } = {};
   if (config.security.tlsKeyPath && config.security.tlsCertPath) {
     try {
-      httpsOpts.key = readFileSync(config.security.tlsKeyPath, 'utf8');
-      httpsOpts.cert = readFileSync(config.security.tlsCertPath, 'utf8');
-      logger.info('TLS enabled');
+      httpsOpts.key = readFileSync(config.security.tlsKeyPath);
+      httpsOpts.cert = readFileSync(config.security.tlsCertPath);
+      logger.info('TLS enabled (prefer reverse-proxy TLS in production).');
     } catch (err: any) {
       logger.warn(`Failed to load TLS certificates: ${err.message}. Falling back to HTTP.`);
     }
   }
 
-  const fastify = Fastify({ logger: false });
+  const fastify = Fastify({
+    logger: false,
+    ...(httpsOpts.key && httpsOpts.cert ? { https: httpsOpts } : {}),
+  });
 
-  // Enable HTTPS if TLS config is provided
-  if (httpsOpts.key && httpsOpts.cert) {
-    // @ts-expect-error: Fastify v5 supports https via this property
-    fastify.https = httpsOpts;
-  }
-
-  await fastify.register(cors, { origin: '*' });
+  await fastify.register(cors, { origin: parseCorsOrigins(config.security.corsOrigins) });
   await fastify.register(rateLimit, { max: config.security.rateLimitMax, timeWindow: '1 minute' });
 
-  // API key auth middleware
   fastify.addHook('preHandler', async (request, reply) => {
     metrics.requestsTotal++;
     metrics.requestsByPath[request.url] = (metrics.requestsByPath[request.url] || 0) + 1;
 
-    // Skip auth for health and metrics endpoints
-    if (request.url === '/health' || request.url === '/metrics') return;
+    if (isPublicPath(request.url.split('?')[0] || request.url)) return;
 
     if (config.security.apiKey) {
-      const auth = request.headers.authorization;
-      if (!auth || !auth.startsWith('Bearer ') || auth.slice(7) !== config.security.apiKey) {
+      if (!bearerMatches(request.headers.authorization, config.security.apiKey)) {
         metrics.errorsTotal++;
         return reply
           .status(401)
@@ -87,7 +111,6 @@ async function main() {
     }
   });
 
-  // 1. REST API endpoints
   fastify.get('/health', async () => {
     const state = await readState();
     return {
@@ -101,7 +124,15 @@ async function main() {
     return reply.type('text/plain').send(metricsText());
   });
 
-  fastify.get('/api/state', async (request, reply) => {
+  /** Public bootstrap config for the dashboard (never returns secrets). */
+  fastify.get('/api/config', async () => {
+    return {
+      authRequired: Boolean(config.security.apiKey),
+      apiBaseUrl: config.api.baseUrl,
+    };
+  });
+
+  fastify.get('/api/state', async (_request, reply) => {
     try {
       const state = await readState();
       const score = computeSecurityScore(state.allFindings);
@@ -119,7 +150,7 @@ async function main() {
     }
   });
 
-  fastify.post('/api/scan', async (request, reply) => {
+  fastify.post('/api/scan', async (_request, reply) => {
     try {
       logger.info('API delegated scan to MCP server...');
       const mcpClient = await createMcpClient();
@@ -225,7 +256,6 @@ Provide professional, concise responses.`,
     }
   });
 
-  // 2. Serve static dashboard assets if built
   const dashboardDistPath = join(__dirname, '../../dashboard/dist');
   if (existsSync(dashboardDistPath)) {
     logger.info(`Registering static dashboard handler for path: ${dashboardDistPath}`);
@@ -235,7 +265,7 @@ Provide professional, concise responses.`,
       wildcard: true,
     });
 
-    fastify.setNotFoundHandler(async (request, reply) => {
+    fastify.setNotFoundHandler(async (_request, reply) => {
       return reply.sendFile('index.html');
     });
   } else {
@@ -251,15 +281,14 @@ Provide professional, concise responses.`,
     });
   }
 
-  // Graceful shutdown
   const stop = async (signal: string) => {
     logger.info(`Received ${signal}. Shutting down gracefully...`);
     await fastify.close();
     logger.info('Server closed.');
     process.exit(0);
   };
-  process.on('SIGTERM', () => stop('SIGTERM'));
-  process.on('SIGINT', () => stop('SIGINT'));
+  process.on('SIGTERM', () => void stop('SIGTERM'));
+  process.on('SIGINT', () => void stop('SIGINT'));
 
   const proto = httpsOpts.key ? 'https' : 'http';
   await fastify.listen({ host: config.api.host, port: config.api.port });

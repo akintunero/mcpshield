@@ -14,13 +14,21 @@ export function ensureDotenv(): void {
 
 const port = (fallback: number) => z.coerce.number().int().min(1).max(65535).default(fallback);
 
+/** Empty string or a valid absolute URL (http/https). */
+const optionalUrl = z
+  .string()
+  .default('')
+  .refine((v) => v === '' || /^https?:\/\//i.test(v), {
+    message: 'Must be empty or a valid http(s) URL',
+  });
+
 /** Raw environment schema. Secrets are optional here; guards enforce per app. */
 export const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 
-  // AWS / LocalStack
-  LOCALSTACK_ENDPOINT: z.string().url().default('http://localhost:4566'),
+  // AWS endpoint (leave empty to use real AWS). Set to a LocalStack URL for local dev.
+  LOCALSTACK_ENDPOINT: optionalUrl,
   CLOUD_ENDPOINT: z.string().optional(),
   AWS_ACCESS_KEY_ID: z.string().default('test'),
   AWS_SECRET_ACCESS_KEY: z.string().default('test'),
@@ -30,8 +38,10 @@ export const EnvSchema = z.object({
   MCP_TRANSPORT: z.enum(['stdio', 'http']).default('http'),
   MCP_HTTP_HOST: z.string().default('0.0.0.0'),
   MCP_HTTP_PORT: port(7801),
-  MCP_SERVER_URL: z.string().url().default('http://localhost:7801/mcp'),
+  MCP_SERVER_URL: z.string().url().default('http://localhost:7801/sse'),
   MCPSHIELD_STATE_DIR: z.string().default('./.mcpshield-state'),
+  /** Shared secret for MCP HTTP transport. Required when NODE_ENV=production. */
+  MCP_API_KEY: z.string().optional(),
 
   // API + dashboard
   API_HOST: z.string().default('0.0.0.0'),
@@ -70,6 +80,8 @@ export const EnvSchema = z.object({
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
   TLS_KEY_PATH: z.string().optional(),
   TLS_CERT_PATH: z.string().optional(),
+  /** Comma-separated origins, or * for any (dev only). */
+  CORS_ORIGINS: z.string().default('*'),
 
   // State management
   STATE_BACKUP_COUNT: z.coerce.number().int().min(0).default(5),
@@ -116,9 +128,11 @@ export interface AppConfig {
   };
   security: {
     apiKey?: string;
+    mcpApiKey?: string;
     rateLimitMax: number;
     tlsKeyPath?: string;
     tlsCertPath?: string;
+    corsOrigins: string;
   };
   stateBackupCount: number;
   n8n: { port: number };
@@ -144,6 +158,10 @@ function shape(env: Env): AppConfig {
           if (!endpoint.startsWith('http://') && !endpoint.startsWith('https://')) {
             endpoint = 'http://' + endpoint;
           }
+        }
+        if (!endpoint) return '';
+        if (!endpoint.startsWith('http://') && !endpoint.startsWith('https://')) {
+          endpoint = 'http://' + endpoint;
         }
         return endpoint;
       })(),
@@ -180,10 +198,12 @@ function shape(env: Env): AppConfig {
       },
     },
     security: {
-      apiKey: env.API_KEY,
+      apiKey: env.API_KEY || undefined,
+      mcpApiKey: env.MCP_API_KEY || undefined,
       rateLimitMax: env.RATE_LIMIT_MAX,
       tlsKeyPath: env.TLS_KEY_PATH,
       tlsCertPath: env.TLS_CERT_PATH,
+      corsOrigins: env.CORS_ORIGINS,
     },
     stateBackupCount: env.STATE_BACKUP_COUNT,
     n8n: { port: env.N8N_PORT },
@@ -204,7 +224,18 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): AppConfig {
       .join('\n');
     throw new ConfigError(`Invalid MCPShield configuration:\n${details}`);
   }
-  return shape(parsed.data);
+  const cfg = shape(parsed.data);
+
+  if (cfg.nodeEnv === 'production') {
+    if (!cfg.security.apiKey) {
+      throw new ConfigError('NODE_ENV=production requires API_KEY.');
+    }
+    if (cfg.mcp.transport === 'http' && !cfg.security.mcpApiKey) {
+      throw new ConfigError('NODE_ENV=production with MCP_TRANSPORT=http requires MCP_API_KEY.');
+    }
+  }
+
+  return cfg;
 }
 
 let cached: AppConfig | undefined;

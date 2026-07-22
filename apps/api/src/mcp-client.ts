@@ -39,7 +39,13 @@ export async function createMcpClient(): Promise<Client> {
       sseUrl.pathname = '/sse';
     }
     logger.info(`Initializing MCP Client via HTTP SSE transport targeting: ${sseUrl.toString()}`);
-    transport = new SSEClientTransport(sseUrl);
+    const headers: Record<string, string> = {};
+    if (config.security.mcpApiKey) {
+      headers.Authorization = `Bearer ${config.security.mcpApiKey}`;
+    }
+    transport = new SSEClientTransport(sseUrl, {
+      requestInit: { headers },
+    });
   }
 
   await client.connect(transport);

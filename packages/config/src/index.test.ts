@@ -25,8 +25,42 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ ...BASE, LOCALSTACK_ENDPOINT: 'not-a-url' })).toThrow(ConfigError);
   });
 
+  it('allows empty LOCALSTACK_ENDPOINT for real AWS', () => {
+    const cfg = loadConfig({ ...BASE, LOCALSTACK_ENDPOINT: '' });
+    expect(cfg.aws.endpoint).toBe('');
+  });
+
   it('rejects invalid provider values', () => {
     expect(() => loadConfig({ ...BASE, LLM_PROVIDER: 'bogus' })).toThrow(ConfigError);
+  });
+
+  it('requires API_KEY and MCP_API_KEY in production', () => {
+    expect(() =>
+      loadConfig({
+        ...BASE,
+        NODE_ENV: 'production',
+        MCP_TRANSPORT: 'http',
+      }),
+    ).toThrow(/API_KEY/);
+
+    expect(() =>
+      loadConfig({
+        ...BASE,
+        NODE_ENV: 'production',
+        MCP_TRANSPORT: 'http',
+        API_KEY: 'api-secret',
+      }),
+    ).toThrow(/MCP_API_KEY/);
+
+    const cfg = loadConfig({
+      ...BASE,
+      NODE_ENV: 'production',
+      MCP_TRANSPORT: 'http',
+      API_KEY: 'api-secret',
+      MCP_API_KEY: 'mcp-secret',
+    });
+    expect(cfg.security.apiKey).toBe('api-secret');
+    expect(cfg.security.mcpApiKey).toBe('mcp-secret');
   });
 });
 

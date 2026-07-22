@@ -1,4 +1,40 @@
 const API_BASE = '';
+const API_KEY_STORAGE = 'mcpshield_api_key';
+
+function getApiKey() {
+  try {
+    return localStorage.getItem(API_KEY_STORAGE) || '';
+  } catch {
+    return '';
+  }
+}
+
+function setApiKey(key) {
+  try {
+    if (key) localStorage.setItem(API_KEY_STORAGE, key);
+    else localStorage.removeItem(API_KEY_STORAGE);
+  } catch {}
+}
+
+function authHeaders(extra = {}) {
+  const headers = { ...extra };
+  const key = getApiKey();
+  if (key) headers.Authorization = `Bearer ${key}`;
+  return headers;
+}
+
+async function apiFetch(path, options = {}) {
+  const headers = authHeaders(options.headers || {});
+  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  if (res.status === 401) {
+    const entered = window.prompt('API key required. Enter API_KEY:');
+    if (entered) {
+      setApiKey(entered.trim());
+      return apiFetch(path, options);
+    }
+  }
+  return res;
+}
 
 const FINDINGS_CATALOG = {
   'MCPS-S3-001': {
@@ -506,11 +542,11 @@ async function syncState(forceScan = false) {
 
   try {
     if (forceScan) {
-      console.log('Triggering LocalStack scan from Sync State...');
-      await fetch(`${API_BASE}/api/scan`, { method: 'POST' });
+      console.log('Triggering environment scan from Sync State...');
+      await apiFetch('/api/scan', { method: 'POST' });
     }
 
-    const res = await fetch(`${API_BASE}/api/state`);
+    const res = await apiFetch('/api/state');
     if (!res.ok) throw new Error('API query failed');
 
     const data = await res.json();
@@ -660,7 +696,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const typingEl = appendMessage('assistant typing', '...');
 
     try {
-      const res = await fetch(`${API_BASE}/api/chat`, {
+      const res = await apiFetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text, history: chatHistory }),

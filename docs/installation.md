@@ -57,27 +57,34 @@ pnpm --filter @mcpshield/agent dev
 
 Open the dashboard at **http://localhost:7802**.
 
-## Docker Deployment
+## Docker Deployment (workshop / LocalStack)
 
 ```bash
 docker compose up --build
 ```
 
 This starts:
-- `localstack` on port 4566 (auto-provisions demo resources)
+- `localstack` (community) on port 4566 (auto-provisions demo resources)
 - `mcp-server` on port 7801
 - `api` on port 7802 (serves dashboard + REST API)
 - `agent` (Slack bot daemon)
 
+## Production (real AWS)
+
+See [deployment.md](./deployment.md) and [iam-policy.md](./iam-policy.md).
+
+```bash
+export API_KEY=... MCP_API_KEY=... AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=...
+docker compose -f docker-compose.prod.yml up --build -d
+```
+
 ## Verify Installation
 
 ```bash
-# Check MCP Server health
+./scripts/e2e-smoke.sh
+
+# Or manually:
 curl http://localhost:7801/health
-
-# Check API health
 curl http://localhost:7802/health
-
-# Prometheus metrics
 curl http://localhost:7802/metrics
 ```

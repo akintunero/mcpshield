@@ -1,0 +1,97 @@
+# Production-oriented single-host stack against real AWS (no LocalStack).
+# Usage:
+#   export API_KEY=... MCP_API_KEY=... AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=...
+#   docker compose -f docker-compose.prod.yml up --build -d
+#
+# Prefer terminating TLS at a reverse proxy (Caddy/nginx/Traefik) in front of :7802.
+# File-backed state is single-replica only — do not scale mcp-server/api beyond 1.
+
+services:
+  mcp-server:
+    build:
+      context: .
+      dockerfile: docker/mcp-server/Dockerfile
+    container_name: mcpshield-mcp-server
+    ports:
+      - '7801:7801'
+    volumes:
+      - mcpshield-state:/app/.mcpshield-state
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+      - LOCALSTACK_ENDPOINT=
+      - CLOUD_ENDPOINT=
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
+      - MCP_TRANSPORT=http
+      - MCP_HTTP_HOST=0.0.0.0
+      - MCP_HTTP_PORT=7801
+      - MCPSHIELD_STATE_DIR=/app/.mcpshield-state
+      - MCP_API_KEY=${MCP_API_KEY:?set MCP_API_KEY}
+      - CORS_ORIGINS=${CORS_ORIGINS:-}
+      - API_KEY=${API_KEY:?set API_KEY}
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+    container_name: mcpshield-api
+    ports:
+      - '7802:7802'
+    volumes:
+      - mcpshield-state:/app/.mcpshield-state
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+      - LOCALSTACK_ENDPOINT=
+      - CLOUD_ENDPOINT=
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
+      - MCP_TRANSPORT=http
+      - MCP_SERVER_URL=http://mcp-server:7801/sse
+      - MCP_API_KEY=${MCP_API_KEY:?set MCP_API_KEY}
+      - API_HOST=0.0.0.0
+      - API_PORT=7802
+      - MCPSHIELD_STATE_DIR=/app/.mcpshield-state
+      - API_KEY=${API_KEY:?set API_KEY}
+      - CORS_ORIGINS=${CORS_ORIGINS:-}
+    depends_on:
+      - mcp-server
+    restart: unless-stopped
+
+  agent:
+    build:
+      context: .
+      dockerfile: docker/agent/Dockerfile
+    container_name: mcpshield-agent
+    volumes:
+      - mcpshield-state:/app/.mcpshield-state
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+      - LOCALSTACK_ENDPOINT=
+      - CLOUD_ENDPOINT=
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
+      - MCP_TRANSPORT=http
+      - MCP_SERVER_URL=http://mcp-server:7801/sse
+      - MCP_API_KEY=${MCP_API_KEY:?set MCP_API_KEY}
+      - MCPSHIELD_STATE_DIR=/app/.mcpshield-state
+      - API_KEY=${API_KEY:?set API_KEY}
+    depends_on:
+      - mcp-server
+    restart: unless-stopped
+
+volumes:
+  mcpshield-state:
+    name: mcpshield-state

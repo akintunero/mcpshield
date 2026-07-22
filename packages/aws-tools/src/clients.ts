@@ -25,32 +25,38 @@ export function getClientConfig() {
       endpoint.includes('localstack') ||
       endpoint.includes('host.docker.internal'));
 
-  if (isLocal) {
+  if (endpoint) {
     clientConfig.endpoint = endpoint;
+  }
+
+  if (isLocal) {
     clientConfig.credentials = {
       accessKeyId: config.aws.accessKeyId || 'test',
       secretAccessKey: config.aws.secretAccessKey || 'test',
     };
-  } else {
-    if (config.aws.accessKeyId && config.aws.accessKeyId !== 'test') {
-      clientConfig.credentials = {
-        accessKeyId: config.aws.accessKeyId,
-        secretAccessKey: config.aws.secretAccessKey,
-      };
-    }
+  } else if (config.aws.accessKeyId && config.aws.accessKeyId !== 'test') {
+    clientConfig.credentials = {
+      accessKeyId: config.aws.accessKeyId,
+      secretAccessKey: config.aws.secretAccessKey,
+    };
   }
   return clientConfig;
 }
 
+function isLocalEndpoint() {
+  const ep = getConfig().aws.endpoint;
+  return !!(
+    ep &&
+    (ep.includes('localhost') ||
+      ep.includes('127.0.0.1') ||
+      ep.includes('localstack') ||
+      ep.includes('host.docker.internal'))
+  );
+}
+
 export const s3Client = new S3Client({
   ...getClientConfig(),
-  forcePathStyle: !!(
-    getConfig().aws.endpoint &&
-    (getConfig().aws.endpoint.includes('localhost') ||
-      getConfig().aws.endpoint.includes('127.0.0.1') ||
-      getConfig().aws.endpoint.includes('localstack') ||
-      getConfig().aws.endpoint.includes('host.docker.internal'))
-  ),
+  forcePathStyle: isLocalEndpoint(),
 });
 export const iamClient = new IAMClient(getClientConfig());
 export const lambdaClient = new LambdaClient(getClientConfig());

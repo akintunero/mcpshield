@@ -1,6 +1,8 @@
+# Local / workshop stack with LocalStack (community — no auth token required).
+# For real AWS: docker compose -f docker-compose.prod.yml up --build
 services:
   localstack:
-    image: localstack/localstack-pro:latest
+    image: localstack/localstack:4.3
     container_name: mcpshield-localstack
     ports:
       - '4566:4566'
@@ -8,22 +10,23 @@ services:
       - localstack-data:/var/lib/localstack
       - ./scripts/localstack-init:/etc/localstack/init/ready.d
     environment:
-      - LOCALSTACK_AUTH_TOKEN=dummy
-      - SERVICES=serverless
+      # Community-safe core services used by MCPShield scanners
+      - SERVICES=s3,ec2,lambda,iam,dynamodb,sqs,sns,cloudtrail,logs,ssm,secretsmanager
       - LS_LOG=warn
       - AWS_ACCESS_KEY_ID=test
       - AWS_SECRET_ACCESS_KEY=test
       - AWS_DEFAULT_REGION=us-east-1
+      - DEBUG=0
     healthcheck:
       test:
         [
           'CMD-SHELL',
-          'curl -sf http://localhost:4566/_localstack/health > /dev/null 2>&1 && aws --endpoint-url=http://localhost:4566 s3 ls > /dev/null 2>&1 || exit 1',
+          'curl -sf http://localhost:4566/_localstack/health > /dev/null 2>&1 || exit 1',
         ]
       interval: 10s
       timeout: 5s
       retries: 15
-      start_period: 20s
+      start_period: 25s
     restart: unless-stopped
 
   mcp-server:
@@ -31,12 +34,13 @@ services:
       context: .
       dockerfile: docker/mcp-server/Dockerfile
     container_name: mcpshield-mcp-server
+    user: "0"
     ports:
       - '7801:7801'
     volumes:
       - mcpshield-state:/app/.mcpshield-state
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
       - LOG_LEVEL=info
       - LOCALSTACK_ENDPOINT=http://localstack:4566
       - AWS_ACCESS_KEY_ID=test
@@ -46,15 +50,11 @@ services:
       - MCP_HTTP_HOST=0.0.0.0
       - MCP_HTTP_PORT=7801
       - MCPSHIELD_STATE_DIR=/app/.mcpshield-state
+      - MCP_API_KEY=${MCP_API_KEY:-}
+      - CORS_ORIGINS=${CORS_ORIGINS:-*}
     depends_on:
       localstack:
         condition: service_healthy
-    healthcheck:
-      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:7801/health || exit 1']
-      interval: 15s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
     restart: unless-stopped
 
   api:
@@ -62,6 +62,7 @@ services:
       context: .
       dockerfile: docker/api/Dockerfile
     container_name: mcpshield-api
+    user: "0"
     ports:
       - '7802:7802'
     volumes:
@@ -69,37 +70,7 @@ services:
     env_file:
       - .env
     environment:
-      - NODE_ENV=production
-      - LOG_LEVEL=info
-      - LOCALSTACK_ENDPOINT=http://localstack:4566
-      - AWS_ACCESS_KEY_ID=test
-      - AWS_SECRET_ACCESS_KEY=test
-      - AWS_DEFAULT_REGION=us-east-1
-      - API_HOST=0.0.0.0
-      - API_PORT=7802
-      - MCPSHIELD_STATE_DIR=/app/.mcpshield-state
-    depends_on:
-      mcp-server:
-        condition: service_healthy
-    restart: unless-stopped
-    healthcheck:
-      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:7802/health || exit 1']
-      interval: 15s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-
-  agent:
-    build:
-      context: .
-      dockerfile: docker/agent/Dockerfile
-    container_name: mcpshield-agent
-    volumes:
-      - mcpshield-state:/app/.mcpshield-state
-    env_file:
-      - .env
-    environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
       - LOG_LEVEL=info
       - LOCALSTACK_ENDPOINT=http://localstack:4566
       - AWS_ACCESS_KEY_ID=test
@@ -107,10 +78,41 @@ services:
       - AWS_DEFAULT_REGION=us-east-1
       - MCP_TRANSPORT=http
       - MCP_SERVER_URL=http://mcp-server:7801/sse
+      - MCP_API_KEY=${MCP_API_KEY:-}
+      - API_HOST=0.0.0.0
+      - API_PORT=7802
+      - MCPSHIELD_STATE_DIR=/app/.mcpshield-state
+      - API_KEY=${API_KEY:-}
+      - CORS_ORIGINS=${CORS_ORIGINS:-*}
+    depends_on:
+      mcp-server:
+        condition: service_started
+    restart: unless-stopped
+
+  agent:
+    build:
+      context: .
+      dockerfile: docker/agent/Dockerfile
+    container_name: mcpshield-agent
+    user: "0"
+    volumes:
+      - mcpshield-state:/app/.mcpshield-state
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=development
+      - LOG_LEVEL=info
+      - LOCALSTACK_ENDPOINT=http://localstack:4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=us-east-1
+      - MCP_TRANSPORT=http
+      - MCP_SERVER_URL=http://mcp-server:7801/sse
+      - MCP_API_KEY=${MCP_API_KEY:-}
       - MCPSHIELD_STATE_DIR=/app/.mcpshield-state
     depends_on:
       mcp-server:
-        condition: service_healthy
+        condition: service_started
     restart: unless-stopped
 
 volumes:

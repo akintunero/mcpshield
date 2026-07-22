@@ -32,7 +32,7 @@ export function runSecurityEngine(snapshots: ResourceSnapshot[]): Finding[] {
             catalogId: catalogEntry.id,
             title: catalogEntry.title,
             severity: catalogEntry.severity,
-            service: catalogEntry.service,
+            service: snapshot.service,
             resource: {
               service: snapshot.service,
               type: snapshot.type,

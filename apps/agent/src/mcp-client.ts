@@ -32,14 +32,18 @@ export async function createMcpClient(): Promise<Client> {
       env: { ...process.env, MCP_TRANSPORT: 'stdio' },
     });
   } else {
-    // Resolve HTTP SSE Endpoint
     const sseUrl = new URL(config.mcp.serverUrl);
-    // Standardize to the Fastify /sse connection endpoint
     if (sseUrl.pathname === '/mcp' || sseUrl.pathname === '/') {
       sseUrl.pathname = '/sse';
     }
     logger.info(`Initializing MCP Client via HTTP SSE transport targeting: ${sseUrl.toString()}`);
-    transport = new SSEClientTransport(sseUrl);
+    const headers: Record<string, string> = {};
+    if (config.security.mcpApiKey) {
+      headers.Authorization = `Bearer ${config.security.mcpApiKey}`;
+    }
+    transport = new SSEClientTransport(sseUrl, {
+      requestInit: { headers },
+    });
   }
 
   await client.connect(transport);

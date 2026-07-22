@@ -30,11 +30,18 @@ function slackSev(severity: string): string {
 function formatFindingsSlack(findings: any[]): string {
   if (findings.length === 0) return '_No findings open! Your posture is secure._';
 
-  return findings
+  const lines = findings
     .map((f: any) => {
       return `• [${slackSev(f.severity)}] \`${f.findingId}\` — *${f.title}* on \`${f.resource.type}:${f.resource.id}\` (Risk: ${f.riskScore})`;
     })
     .join('\n');
+
+  return (
+    lines +
+    '\n\n_Copy any \`findingId\` above and run: `@Shield fix finding <id>`_' +
+    '\n_Or batch-fix all critical: `@Shield fix all critical`_' +
+    '\n_Then approve: `@Shield approve` — human-in-the-loop enforced._'
+  );
 }
 
 export async function startSlackBot() {
@@ -92,8 +99,8 @@ export async function startSlackBot() {
         return;
       }
 
-      // COMMAND: show findings
-      if (text === 'show findings' || text === 'findings') {
+      // COMMAND: show findings / list findings
+      if (text === 'show findings' || text === 'findings' || text === 'list findings' || text === 'list all') {
         const res = await mcpClient.callTool({ name: 'list_findings', arguments: {} });
         const result = JSON.parse((res as any).content[0].text);
         await say(
