@@ -6,7 +6,7 @@ export default defineConfig({
     hookTimeout: 60_000,
     include: ['tests/**/*.test.ts'],
     env: {
-      SKIP_E2E: process.env.SKIP_E2E || '',
+      MCPSHIELD_E2E: process.env.MCPSHIELD_E2E || '',
     },
   },
 });

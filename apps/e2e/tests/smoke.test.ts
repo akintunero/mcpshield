@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 
-const shouldSkip = process.env.SKIP_E2E === 'true' || !process.env.CI;
+const shouldSkip = process.env.MCPSHIELD_E2E !== 'true';
 beforeAll(() => {
   if (shouldSkip) {
-    console.log('Skipping E2E tests — set CI=true or start docker compose');
+    console.log('Skipping E2E tests — set MCPSHIELD_E2E=true to run against a running stack');
   }
 });
 
