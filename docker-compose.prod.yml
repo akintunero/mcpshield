@@ -1,10 +1,12 @@
-# Production-oriented single-host stack against real AWS (no LocalStack).
-# Usage:
-#   export API_KEY=... MCP_API_KEY=... AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=...
-#   docker compose -f docker-compose.prod.yml up --build -d
-#
-# Prefer terminating TLS at a reverse proxy (Caddy/nginx/Traefik) in front of :7802.
-# File-backed state is single-replica only — do not scale mcp-server/api beyond 1.
+name: mcpshield
+
+volumes:
+  mcpshield-state:
+    name: mcpshield-state
+
+x-default-resources: &default-resources
+  mem_limit: 512m
+  mem_reservation: 256m
 
 services:
   mcp-server:
@@ -19,21 +21,32 @@ services:
     env_file:
       - .env
     environment:
-      - NODE_ENV=production
-      - LOG_LEVEL=info
-      - LOCALSTACK_ENDPOINT=
-      - CLOUD_ENDPOINT=
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
-      - MCP_TRANSPORT=http
-      - MCP_HTTP_HOST=0.0.0.0
-      - MCP_HTTP_PORT=7801
-      - MCPSHIELD_STATE_DIR=/app/.mcpshield-state
-      - MCP_API_KEY=${MCP_API_KEY:?set MCP_API_KEY}
-      - CORS_ORIGINS=${CORS_ORIGINS:-}
-      - API_KEY=${API_KEY:?set API_KEY}
+      NODE_ENV: production
+      LOG_LEVEL: info
+      LOCALSTACK_ENDPOINT: ''
+      CLOUD_ENDPOINT: ''
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+      MCP_TRANSPORT: http
+      MCP_HTTP_HOST: 0.0.0.0
+      MCP_HTTP_PORT: 7801
+      MCPSHIELD_STATE_DIR: /app/.mcpshield-state
+      MCP_API_KEY: ${MCP_API_KEY:?set MCP_API_KEY}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      API_KEY: ${API_KEY:?set API_KEY}
+    healthcheck:
+      test: ['CMD', 'curl', '-sf', 'http://127.0.0.1:7801/health']
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    read_only: true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=64m
+    command: ['sh', '-c', 'chown mcpshield:mcpshield /app/.mcpshield-state 2>/dev/null; exec node /app/apps/mcp-server/dist/index.js']
     restart: unless-stopped
+    <<: *default-resources
 
   api:
     build:
@@ -47,24 +60,35 @@ services:
     env_file:
       - .env
     environment:
-      - NODE_ENV=production
-      - LOG_LEVEL=info
-      - LOCALSTACK_ENDPOINT=
-      - CLOUD_ENDPOINT=
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
-      - MCP_TRANSPORT=http
-      - MCP_SERVER_URL=http://mcp-server:7801/sse
-      - MCP_API_KEY=${MCP_API_KEY:?set MCP_API_KEY}
-      - API_HOST=0.0.0.0
-      - API_PORT=7802
-      - MCPSHIELD_STATE_DIR=/app/.mcpshield-state
-      - API_KEY=${API_KEY:?set API_KEY}
-      - CORS_ORIGINS=${CORS_ORIGINS:-}
+      NODE_ENV: production
+      LOG_LEVEL: info
+      LOCALSTACK_ENDPOINT: ''
+      CLOUD_ENDPOINT: ''
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+      MCP_TRANSPORT: http
+      MCP_SERVER_URL: http://mcp-server:7801/sse
+      MCP_API_KEY: ${MCP_API_KEY:?set MCP_API_KEY}
+      API_HOST: 0.0.0.0
+      API_PORT: 7802
+      MCPSHIELD_STATE_DIR: /app/.mcpshield-state
+      API_KEY: ${API_KEY:?set API_KEY}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+    healthcheck:
+      test: ['CMD', 'curl', '-sf', 'http://127.0.0.1:7802/health']
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
-      - mcp-server
+      mcp-server:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=64m
     restart: unless-stopped
+    <<: *default-resources
 
   agent:
     build:
@@ -76,22 +100,24 @@ services:
     env_file:
       - .env
     environment:
-      - NODE_ENV=production
-      - LOG_LEVEL=info
-      - LOCALSTACK_ENDPOINT=
-      - CLOUD_ENDPOINT=
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
-      - MCP_TRANSPORT=http
-      - MCP_SERVER_URL=http://mcp-server:7801/sse
-      - MCP_API_KEY=${MCP_API_KEY:?set MCP_API_KEY}
-      - MCPSHIELD_STATE_DIR=/app/.mcpshield-state
-      - API_KEY=${API_KEY:?set API_KEY}
+      NODE_ENV: production
+      LOG_LEVEL: info
+      LOCALSTACK_ENDPOINT: ''
+      CLOUD_ENDPOINT: ''
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+      MCP_TRANSPORT: http
+      MCP_SERVER_URL: http://mcp-server:7801/sse
+      MCP_API_KEY: ${MCP_API_KEY:?set MCP_API_KEY}
+      MCPSHIELD_STATE_DIR: /app/.mcpshield-state
+      API_KEY: ${API_KEY:?set API_KEY}
     depends_on:
-      - mcp-server
+      mcp-server:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=64m
+    command: ['sh', '-c', 'chown mcpshield:mcpshield /app/.mcpshield-state 2>/dev/null; exec node /app/apps/agent/dist/index.js']
     restart: unless-stopped
-
-volumes:
-  mcpshield-state:
-    name: mcpshield-state
+    <<: *default-resources

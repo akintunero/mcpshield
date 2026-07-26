@@ -1,0 +1,132 @@
+ADR-004d: Required Refactors, Risks, and Backwards Compatibility
+=================================================================
+
+A. REQUIRED REFACTORS
+----------------------
+
+1. packages/aws-tools/src/scanner.ts
+   - Extract scan functions into plugins/cloud-aws/src/scanner.ts
+   - scanEnvironment() becomes cloud-aws plugin's scan()
+   - ResourceSnapshot format unchanged — already provider-agnostic
+
+2. packages/aws-tools/src/remediator.ts
+   - Extract switch/case into capability-based dispatch
+   - Each operation maps to a capabilityId
+   - RemediationAction.service field becomes deprecated
+
+3. packages/aws-tools/src/verifier.ts
+   - VERIFIER_REGISTRY moves to cloud-aws plugin
+   - verifyFinding() becomes plugin.verify()
+   - VerificationResult stays in @mcpshield/sdk
+
+4. packages/aws-tools/src/clients.ts
+   - Moves entirely to cloud-aws plugin
+   - Core never creates AWS SDK clients
+
+5. apps/mcp-server/src/server.ts
+   - Remove: import { scanEnvironment } from '@mcpshield/aws-tools'
+   - Add: import { pluginRegistry } from '@mcpshield/mcp-core'
+   - scan_environment handler: pluginRegistry.getAll().scan()
+   - mapFindingToRemediation: replaced by capabilityRouter.resolve()
+   - health check: probes all plugin health() not just S3
+   - Tool descriptions: remove "AWS" from all descriptions
+
+6. apps/agent/src/slack.ts
+   - AI system prompt: remove "You have MCP tools to scan AWS"
+   - Replace with: "You have plugins with capabilities"
+
+7. packages/finding-engine/src/catalog.ts
+   - Add capabilityId field to each catalog entry
+   - e.g. { capabilityId: "scan.s3.buckets" }
+   - service field remains as display label only
+
+8. packages/config/src/index.ts
+   - Remove aws-specific config (localstack, accessKeyId, secretAccessKey)
+   - Move to cloud-aws plugin's config
+   - Core config only has: logLevel, port, stateDir
+
+9. packages/report-generator/src/generator.ts
+   - Move into plugins/reporting/
+   - Keep backward-compat re-export
+
+10. packages/scoring-engine/src/scoring.ts
+    - CATEGORY_LOOKUP becomes runtime-built from plugin capabilities
+    - No hardcoded catalogId → category mapping
+
+---
+
+B. RISKS AND MITIGATIONS
+-------------------------
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|-----------|--------|------------|
+| Plugin API churn breaks community plugins | Medium | High | Stabilize API in Phase 1-2 before announcing. Use semver. |
+| Dynamic imports fail silently | Low | High | Validate manifest + entrypoint at startup. Emit plugin.errored event. |
+| Plugin A crashes core | Low | Critical | Run plugins in isolated worker threads (Phase 8). For now, wrap in try/catch. |
+| Capability routing is slower than switch | Medium | Low | Cache resolved routes. Route resolution is O(n) on capabilities (~100). |
+| Event bus memory leak from unsubscribed handlers | Low | Medium | Require plugins to call off() in shutdown(). Unit test event cleanup. |
+| Finding ID collision across plugins | Medium | High | Prefix all finding IDs with pluginId: "cloud-aws/s3-001/my-bucket" |
+| Plugin dependency conflicts (@aws-sdk versions) | Medium | Medium | Use isolated workspace packages. pnpm handles this. |
+| Migration breaks existing Slack commands | Medium | Critical | Phase 1 keeps all Slack handlers unchanged. Only internal routing changes. |
+
+---
+
+C. BACKWARDS COMPATIBILITY STRATEGY
+-------------------------------------
+
+1. API Endpoints (apps/api)
+   - /api/state: returns same shape (findings are still Finding[])
+   - /api/scan: returns same shape
+   - /api/catalog: returns same shape (catalog entries unchanged)
+   - /api/chat: unchanged
+
+2. MCP Tools (apps/mcp-server)
+   - All 15+ tool names unchanged
+   - Input schemas unchanged
+   - Output schemas unchanged (new fields may be added but never removed)
+
+3. Slack Bot Commands (apps/agent)
+   - All existing commands (@Shield scan, fix, approve, etc.) work identically
+   - Only the internal routing changes — user sees no difference
+
+4. State persistence
+   - state.json schema unchanged
+   - Existing state files load without migration
+   - New fields (pluginId, capabilityId) are optional
+
+5. Package exports
+   - @mcpshield/aws-tools re-exports everything from cloud-aws plugin
+   - @mcpshield/report-generator re-exports everything from reporting plugin
+   - Existing imports continue to work
+   - New packages (@mcpshield/sdk, @mcpshield/mcp-core) are additive
+
+6. Finding catalog
+   - Existing 24 catalog entries unchanged
+   - New capabilityId field added — optional
+   - No breaking changes to FindingCatalogEntrySchema
+
+7. Docker images
+   - Same image names, same ports
+   - Same environment variables (new ones added, none removed)
+   - docker-compose.yml unchanged for end users
+
+---
+
+D. ROLLBACK PLAN
+-----------------
+
+If a migration phase causes issues:
+
+Phase 1 rollback:
+  - git revert packages/plugins/cloud-aws/
+  - Restore packages/aws-tools/ to original
+  - Rebuild Docker images
+
+Phase 2-3 rollback:
+  - Set PLUGIN_DISCOVERY_DISABLED=true env var
+  - Falls back to hardcoded plugin list (cloud-aws only)
+  - Same behavior as pre-migration
+
+Phase 4+ rollback:
+  - Each phase has a feature flag: TASK_PLANNER_ENABLED=false
+  - Falls back to direct tool dispatch

@@ -1,20 +1,26 @@
 # MCPShield
 
-> **An AI-Powered Cloud Security Posture Management (CSPM) tool using the Model Context Protocol (MCP)**
+> **A plugin-first AI Security Platform using the Model Context Protocol (MCP)**
 
-MCPShield uses AI agents to scan cloud environments, detect security misconfigurations, generate Terraform and CLI remediations, and enforce human-in-the-loop approval workflows.
+MCPShield orchestrates security plugins — cloud scanners, container inspectors, IaC analyzers, compliance frameworks — all through a unified AI agent with human-in-the-loop approval. Plugins are isolated in sandboxed workers, signed with Ed25519, and auto-discovered at startup. No core modifications needed to add a new capability.
 
 ---
 
 ## Features
 
-- **21 Cloud Security Rules** — Critical, High, Medium, and Low findings with MITRE ATT&CK and CIS Benchmark mappings
+- **24 Cloud Security Rules** — Critical, High, Medium, and Low findings with MITRE ATT&CK and CIS Benchmark mappings
 - **AI Security Analyst** — Slack-integrated agent that explains findings, prioritizes risk, and guides remediation
-- **Terraform Remediation** — Auto-generated HCL for every finding
-- **AWS CLI Remediation** — Auto-generated CLI commands for every finding
+- **MCP Protocol** — Standardized tool interface between AI and infrastructure (11+ tools)
+- **Terraform + AWS CLI Remediation** — Auto-generated code for every finding
 - **Human-in-the-Loop** — No write operations execute without explicit approval
-- **Executive Reports** — Professional security posture assessment reports (Markdown)
-- **Security Scoring** — 0–100 score with A–F letter grade and severity breakdown
+- **Dry Run Mode** — Plan remediations without touching infrastructure
+- **Independent Verification** — Every fix is verified via real AWS SDK calls
+- **Evidence Engine** — Before/after state + SHA-256 hashes for compliance audit
+- **Audit Timeline** — Complete history of every action taken by the AI
+- **Tool Execution Traces** — Every MCP invocation logged with reason, duration, I/O
+- **Executive Reports** — Professional security posture assessment (Markdown + HTML)
+- **Category Scoring** — Per-category breakdown (Public Exposure, Identity, Encryption, Secrets, Recovery, Logging)
+- **Security Scoring** — 0–100 score with A–F letter grade and improvement tracking
 - **Multiple LLM Providers** — NVIDIA NIM, Gemini, Ollama, OpenAI-compatible
 - **Web Dashboard** — Real-time security posture visualization
 - **Cloud-Agnostic Architecture** — Provider interface ready for AWS, Azure, GCP, and more
@@ -226,24 +232,29 @@ mcpshield/
 │   ├── agent/           # Slack bot + LLM integration
 │   ├── api/             # REST API (dashboard backend)
 │   ├── dashboard/       # Web dashboard SPA
-│   └── mcp-server/      # MCP tool server
+│   └── mcp-server/      # MCP tool server (audit, evidence, traces)
 ├── packages/
-│   ├── aws-tools/       # AWS SDK clients, scanner, remediator
-│   ├── security-engine/ # Security rule evaluation (21 rules)
+│   ├── aws-tools/       # AWS SDK clients, scanner, remediator, verifier
+│   ├── security-engine/ # Security rule evaluation (24 rules)
 │   ├── finding-engine/  # Finding catalog and registry
-│   ├── scoring-engine/  # Security score calculator (0–100, A–F)
+│   ├── scoring-engine/  # Security score + category breakdown
 │   ├── terraform-generator/  # HCL code generator
 │   ├── aws-cli-generator/    # CLI command generator
-│   ├── report-generator/     # Executive report generator
+│   ├── report-generator/     # Executive + developer report generator
 │   ├── llm/             # Shared LLM provider adapters
-│   ├── types/           # Shared Zod schemas and types
+│   ├── types/           # Shared Zod schemas (audit, evidence, trace)
 │   ├── shared/          # Utility functions
 │   ├── logger/          # Pino logger wrapper
 │   └── config/          # Environment config loader
-├── docs/                # Documentation
-├── labs/                # Workshop labs
+├── localstack/
+│   └── init/            # LocalStack Pro init scripts
+├── scripts/
+│   └── bootstrap/       # Seed vulnerability scripts (workshop)
+├── labs/                # Workshop labs + verification guide
+├── DEMO.md              # Live demo stage script
+├── WORKSHOP.md          # Full workshop guide
 ├── docker/              # Dockerfiles
-└── docker-compose.yml   # Service orchestration
+└── docker-compose.yml   # Service orchestration (Pro + seed + aws-cli)
 ```
 
 ---
@@ -303,29 +314,48 @@ AWS_DEFAULT_REGION=us-east-1
 
 ## Usage (Slack)
 
+### Scan & Discover
 ```
-@Shield scan environment
-@Shield show findings
-@Shield explain finding MCPS-S3-001:vulnerable-bucket
-@Shield generate terraform finding MCPS-S3-001:vulnerable-bucket
-@Shield fix finding MCPS-S3-001:vulnerable-bucket
-@Shield approve
-@Shield rescan
-@Shield security score
-@Shield generate report
+@Shield scan aws                      # Full environment scan
+@Shield list findings                 # List all findings
+@Shield show critical                 # Critical findings only
+@Shield explain finding MCPS-S3-001   # AI explains finding
+@Shield explain finding MCPS-S3-001 eli5  # Beginner-friendly
+@Shield quiz finding MCPS-S3-001      # Quiz yourself
+```
+
+### Plan & Remediate
+```
+@Shield plan                          # Dry-run remediation plan
+@Shield fix finding MCPS-S3-001       # Single finding
+@Shield fix all                       # All open findings
+@Shield approve                       # Execute (human-in-the-loop)
+@Shield generate terraform MCPS-S3-001    # Terraform HCL
+@Shield generate aws-cli MCPS-S3-001      # CLI commands
+```
+
+### Verify & Report
+```
+@Shield verify MCPS-S3-001 customer-files  # Independent verification
+@Shield rescan                          # Re-scan environment
+@Shield security score                  # Score + category breakdown
+@Shield generate report                 # Executive report
+@Shield history                         # Audit timeline
+@Shield trace                           # Last tool trace
+@Shield export audit                    # Export history as markdown
 ```
 
 Or open the web dashboard at `http://localhost:7802`.
 
 ---
 
-## Security Findings (21 Rules)
+## Security Findings (24 Rules)
 
 | Severity | Count | Examples |
 |---|---|---|
-| Critical | 3 | Public S3 bucket, Admin access on user, Old access keys |
-| High | 7 | SSH open to internet, RDP open, Missing encryption, No versioning, CloudTrail disabled, Unencrypted SSM parameter |
-| Medium | 8 | Weak password policy, Unused user, Unused keys, No bucket logging, Lambda deprecated runtime, SQS/SNS/DDB/Secrets missing encryption |
+| Critical | 4 | Public S3 bucket, Admin access on user, Old access keys, Overly permissive IAM role |
+| High | 8 | SSH open to internet, RDP open, Missing encryption, No versioning, CloudTrail disabled, Unencrypted SSM param, KMS rotation disabled, Secret without rotation |
+| Medium | 9 | Weak password policy, Unused user, Unused keys, No bucket logging, Lambda deprecated runtime, SQS/SNS/DDB/Secrets missing encryption |
 | Low | 3 | Missing tags, Poor naming, Missing descriptions |
 
 Every finding includes: Unique ID, Severity, Description, Business Impact, Technical Impact, Attack Scenario, Best Practice, MITRE ATT&CK mapping, CIS mapping, Terraform remediation, AWS CLI remediation, and Risk Score.
@@ -334,6 +364,9 @@ Every finding includes: Unique ID, Severity, Description, Business Impact, Techn
 
 ## Documentation
 
+- [Demo Script](DEMO.md) — Live presentation minute-by-minute guide
+- [Workshop Guide](WORKSHOP.md) — Full workshop with labs, commands, expected outputs
+- [Verification Guide](labs/workshop-verification.md) — Independent remediation verification
 - [Installation Guide](docs/installation.md)
 - [MCP Server Reference](docs/mcp.md)
 - [AI Agent Guide](docs/agent.md)

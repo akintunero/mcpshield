@@ -1,0 +1,233 @@
+ADR-004c: Phased Migration Guide
+==================================
+
+This is a 7-phase migration. Each phase produces a working, releasable
+increment. The project is deployable at every stage.
+
+======================================================================
+PHASE 1 — Extract AWS into First Plugin
+======================================================================
+
+GOAL: Move all AWS logic out of mcp-core into packages/plugins/cloud-aws.
+
+STEPS:
+
+  1. Create packages/plugins/cloud-aws/
+     - Copy scanner.ts, remediator.ts, verifier.ts, clients.ts
+     - Create plugin.json with AWS capabilities
+     - Create src/index.ts implementing MCPPlugin
+     - Remove all imports of @aws-sdk/* from mcp-core
+
+  2. Create packages/sdk/
+     - Define MCPPlugin interface
+     - Define Capability, Finding, EventBus types
+     - Publish as @mcpshield/sdk
+
+  3. Create packages/mcp-core/
+     - PluginRegistry: loads plugins at startup
+     - CapabilityRouter: resolves capabilities
+     - EventBus: in-process event bus
+     - ScoreEngine: aggregates findings from all plugins
+
+  4. Update apps/mcp-server/
+     - Remove direct AWS imports
+     - Load plugins via PluginRegistry
+     - Route tool calls through CapabilityRouter
+
+  5. Keep packages/aws-tools/ as thin re-export wrapper
+     - export { scanEnvironment } from '@mcpshield/plugins/cloud-aws'
+     - Prevents breaking changes for existing consumers
+
+BACKWARDS COMPATIBILITY:
+  - All MCP tool names remain unchanged
+  - All API endpoints remain unchanged
+  - packages/aws-tools still exports the same symbols
+  - state.json format unchanged
+
+======================================================================
+PHASE 2 — Introduce Plugin Registry + Discovery
+======================================================================
+
+GOAL: Auto-discover plugins at startup instead of hardcoding.
+
+STEPS:
+
+  1. Implement filesystem-based plugin discovery in PluginRegistry
+     - Scan packages/plugins/ for plugin.json
+     - Dynamic import of entrypoint
+     - Schema validation on manifest
+
+  2. Add PluginContext
+     - Pass eventBus, logger, configDir, stateDir
+     - Plugins receive context in init()
+
+  3. Add lifecycle hooks
+     - init() called at startup
+     - shutdown() called at graceful exit
+     - health() called by orchestrator
+
+  4. Test with cloud-aws as only plugin
+     - Verify discovery works
+     - Verify init() receives correct context
+     - Verify capabilities are registered
+
+VALIDATION:
+  docker compose up -d
+  # Verify log: "Discovered plugin: cloud-aws v1.0.0"
+  # Verify all 12 AWS service capabilities registered
+
+======================================================================
+PHASE 3 — Capability Routing
+======================================================================
+
+GOAL: Replace hardcoded mapFindingToRemediation with capability routing.
+
+STEPS:
+
+  1. Build CapabilityRouter
+     - Register all plugin capabilities at startup
+     - resolve(verb, resourceType) → correct plugin
+
+  2. Add capability annotations to existing AWS findings
+     - Each catalog entry gets a capabilityId
+     - e.g. "MCPS-S3-001" → capability "remediate.s3.public-block"
+
+  3. Update mapFindingToRemediation
+     - Now calls CapabilityRouter.resolve("remediate", finding.resourceType)
+     - No switch statement needed
+
+  4. Update scan_environment tool
+     - Iterates all plugins, calls scan()
+     - Merges findings from all sources
+     - Unified finding format (prefixed by pluginId)
+
+VALIDATION:
+  docker compose run --rm seed  (provision AWS vulns)
+  # Scan shows same findings, identical format
+  # Remediation routing works through capability resolution
+
+======================================================================
+PHASE 4 — Task Planner + Event Integration
+======================================================================
+
+GOAL: AI orchestrates via Task Planner instead of calling tools directly.
+
+STEPS:
+
+  1. Build TaskPlanner
+     - Accepts high-level intent string
+     - Decomposes into capability requests
+     - Resolves each to a plugin via CapabilityRouter
+     - Builds dependency graph
+     - Executes with parallel/serial merging
+
+  2. Wire EventBus into execution pipeline
+     - Each plugin emits events during scan/remediate/verify
+     - Audit engine subscribes to all events
+     - Report engine subscribes to scan.completed
+
+  3. Update AI agent prompts
+     - No more provider-specific instructions
+     - AI tells TaskPlanner: "scan my infrastructure"
+     - TaskPlanner handles routing
+
+  4. Add multi-plugin orchestration
+     - scan_environment calls scan() on ALL registered plugins
+     - Results merged by resource type
+     - Single unified report
+
+VALIDATION:
+  @Shield scan aws  →  scans only AWS plugin
+  @Shield scan      →  scans ALL plugins
+
+======================================================================
+PHASE 5 — Reporting Plugin
+======================================================================
+
+GOAL: Extract reporting into a plugin, add SARIF output.
+
+STEPS:
+
+  1. Create packages/plugins/reporting/
+     - MarkdownReportEngine (migrate from existing report-generator)
+     - HtmlReportEngine
+     - SarifReportEngine (SARIF is an OASIS standard format)
+     - Executive, Developer, Compliance report templates
+
+  2. Each report is a capability
+     - "report.executive.markdown"
+     - "report.executive.html"
+     - "report.sarif"
+
+  3. Keep @mcpshield/report-generator as re-export wrapper
+     - export { generateReport } from reporting plugin
+
+VALIDATION:
+  @Shield generate report  →  Markdown (unchanged)
+  API now supports ?format=sarif
+
+======================================================================
+PHASE 6 — Compliance Plugins
+======================================================================
+
+GOAL: Compliance frameworks are plugins that consume findings.
+
+STEPS:
+
+  1. Create packages/plugins/compliance/
+     - SOC2 plugin: maps findings to SOC 2 controls
+     - CIS plugin: maps findings to CIS benchmarks
+     - PCI DSS plugin: maps findings to PCI DSS requirements
+
+  2. Compliance plugins do NOT scan
+     - They subscribe to scan.completed events
+     - They analyze findings and produce compliance mappings
+     - They add compliance metadata to findings
+
+  3. Compliance report generation
+     - Reporting plugin pulls compliance data
+     - Generates compliance-specific reports
+
+VALIDATION:
+  @Shield generate report --compliance=soc2
+  → Report shows which controls pass/fail
+
+======================================================================
+PHASE 7 — Community Plugin SDK + Documentation
+======================================================================
+
+GOAL: External developers can write and publish plugins.
+
+STEPS:
+
+  1. Publish @mcpshield/sdk to npm
+  2. Write plugin development guide
+     - Step-by-step: "Create your first plugin"
+     - Example: DigitalOcean cloud plugin
+  3. Add plugin validation CLI command
+     - mcpshield validate-plugin ./my-plugin/
+     - Checks plugin.json, capabilities, entrypoint
+  4. Create plugin marketplace directory
+     - COMMUNITY_PLUGINS.md with known plugins
+  5. Add CI template for plugin repos
+     - GitHub workflow to test plugin against MCPShield
+
+VALIDATION:
+  # External developer creates my-plugin/
+  npm init @mcpshield/plugin
+  npm publish
+  # User installs and it works immediately
+
+======================================================================
+TIMELINE
+======================================================================
+
+Phase 1: Extract AWS plugin      2 weeks
+Phase 2: Plugin discovery         1 week
+Phase 3: Capability routing       2 weeks
+Phase 4: Task Planner             2 weeks
+Phase 5: Reporting plugin         1 week
+Phase 6: Compliance plugins       2 weeks
+Phase 7: Community SDK            2 weeks
+
+Total: 12 weeks to complete migration.

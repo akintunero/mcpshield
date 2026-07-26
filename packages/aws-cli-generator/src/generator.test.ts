@@ -19,6 +19,7 @@ const mockFinding = {
   severity: 'critical' as const,
   service: 's3' as const,
   resource: {
+    provider: 'aws' as const,
     service: 's3' as const,
     type: 'bucket' as const,
     id: 'vulnerable-bucket',
@@ -37,6 +38,7 @@ const iamFinding = {
   catalogId: 'MCPS-IAM-002',
   service: 'iam' as const,
   resource: {
+    provider: 'aws' as const,
     service: 'iam' as const,
     type: 'user' as const,
     id: 'vulnerable-user',

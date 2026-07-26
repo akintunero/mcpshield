@@ -14,6 +14,7 @@ export * from './approval.js';
 export * from './report.js';
 export * from './llm.js';
 export * from './mcp.js';
+export * from './audit.js';
 
 /** The MCPShield product version, surfaced by the MCP `health` tool. */
 export const MCPSHIELD_VERSION = '1.0.0';

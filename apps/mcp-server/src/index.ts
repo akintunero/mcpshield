@@ -9,7 +9,10 @@ import { timingSafeEqual } from 'node:crypto';
 
 import { getConfig } from '@mcpshield/config';
 import { createLogger } from '@mcpshield/logger';
-import { createMcpServer } from './server.js';
+import { createMcpServer, initializePlugins, pluginRegistry } from './server.js';
+import { existsSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const logger = createLogger('mcp-server:main');
 
@@ -88,6 +91,20 @@ async function main() {
     timeWindow: '1 minute',
   });
 
+  // Discover and initialize plugins
+  const __dirname = dirname(fileURLToPath(import.meta.url));
+  const pluginRoot = join(__dirname, '../../packages/plugins');
+  const pluginDirs: string[] = [];
+  if (existsSync(pluginRoot)) {
+    const { readdirSync } = await import('node:fs');
+    for (const dir of readdirSync(pluginRoot, { withFileTypes: true })) {
+      if (dir.isDirectory() && existsSync(join(pluginRoot, dir.name, 'plugin.json'))) {
+        pluginDirs.push(join(pluginRoot, dir.name));
+      }
+    }
+  }
+  await initializePlugins(pluginDirs.length > 0 ? pluginDirs : undefined);
+
   const sessions = new Map<string, Session>();
   const mcpApiKey = config.security.mcpApiKey;
 
@@ -145,6 +162,7 @@ async function main() {
       await server.close().catch(() => undefined);
     }
     sessions.clear();
+    await pluginRegistry.shutdownAll();
     await fastify.close();
     process.exit(0);
   };

@@ -1,54 +1,16 @@
-# Dependencies
 node_modules/
-.pnpm-store/
-
-# Build output
 dist/
+.mcpshield-state/
 *.tsbuildinfo
-.tsbuildinfo
-
-# Test / coverage
+.turbo/
 coverage/
 .vitest/
 
-# Environment
-.env
-.env.local
-.env.*.local
+# Compiled artifacts in source dirs
+packages/*/src/*.js
+packages/*/src/*.d.ts
+packages/*/src/*.d.ts.map
 
-# Personal materials (not part of open-source project)
-mcpshield.pptx
-STUDY_GUIDE.*
-WORKSHOP.md
-labs/
-oau-ife.md
-oau-ife.pdf
-sample-data/
-
-# Runtime state
-**/approvals.json
-**/.mcpshield-state/
-scan-snapshots/*.local.json
-
-# Logs
-logs/
-*.log
-npm-debug.log*
-pnpm-debug.log*
-
-# Editor / OS
-.DS_Store
-.idea/
-.vscode/*
-!.vscode/extensions.json
-!.vscode/settings.json
-Thumbs.db
-/mcpshield-localstack-bootstrap/
-
-# Local-only files
-/adr/adr-002-localstack.md
-/docs/localstack-guide.md
-/docs/localstack-guide.pdf
-/docs/localstack.md
-/scripts/localstack-init/
-/presentations/
+# Binary/presentation files
+*.pptx
+*.pdf

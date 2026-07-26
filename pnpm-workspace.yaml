@@ -1,9 +1,10 @@
 packages:
   - 'apps/*'
   - 'packages/*'
-
+  - 'packages/plugins/*'
+  - 'packages/plugins/*/*'
+  - 'packages/connectors/*'
 allowBuilds:
   esbuild: true
-
 onlyBuiltDependencies:
   - esbuild

@@ -4,6 +4,7 @@ import type { ResourceSnapshot } from '@mcpshield/types';
 
 function makeSnapshot(overrides: Partial<ResourceSnapshot> = {}): ResourceSnapshot {
   return {
+    provider: 'aws',
     service: 's3',
     type: 'bucket',
     id: 'test-bucket',

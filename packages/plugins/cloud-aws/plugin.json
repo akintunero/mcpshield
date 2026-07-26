@@ -1,0 +1,11 @@
+{
+  "id": "cloud-aws",
+  "name": "AWS Cloud",
+  "apiVersion": "v1",
+  "version": "1.0.0",
+  "author": "MCPShield Team",
+  "description": "Scans AWS accounts for security misconfigurations",
+  "license": "MIT",
+  "category": "cloud",
+  "capabilities": ["discover", "scan", "verify", "remediate"]
+}

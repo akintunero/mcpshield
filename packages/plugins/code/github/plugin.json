@@ -1,0 +1,11 @@
+{
+  "id": "github",
+  "name": "GitHub",
+  "apiVersion": "v1",
+  "version": "1.0.0",
+  "author": "MCPShield Team",
+  "description": "Scans GitHub repositories for exposed secrets and misconfigurations",
+  "license": "MIT",
+  "category": "code",
+  "capabilities": ["discover", "scan"]
+}

@@ -1,0 +1,11 @@
+{
+  "id": "markdown-reporter",
+  "name": "Markdown Reporter",
+  "apiVersion": "v1",
+  "version": "1.0.0",
+  "author": "MCPShield Team",
+  "description": "Generates executive Markdown security reports from findings",
+  "license": "MIT",
+  "category": "reporting",
+  "capabilities": ["report"]
+}

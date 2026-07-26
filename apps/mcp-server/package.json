@@ -22,6 +22,8 @@
     "@mcpshield/shared": "workspace:*",
     "@mcpshield/logger": "workspace:*",
     "@mcpshield/config": "workspace:*",
+    "@mcpshield/mcp-core": "workspace:*",
+    "@mcpshield/cloud-aws": "workspace:*",
     "@mcpshield/aws-tools": "workspace:*",
     "@mcpshield/security-engine": "workspace:*",
     "@mcpshield/scoring-engine": "workspace:*",

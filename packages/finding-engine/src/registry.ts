@@ -10,7 +10,7 @@ export class FindingRegistry {
   private readonly byId: Map<string, FindingCatalogEntry>;
 
   constructor(entries: readonly FindingCatalogEntry[] = CATALOG) {
-    const validated = entries.map((entry) => FindingCatalogEntrySchema.parse(entry));
+    const validated = entries.map((entry) => FindingCatalogEntrySchema.passthrough().parse(entry));
     this.byId = new Map(validated.map((entry) => [entry.id, entry]));
     if (this.byId.size !== validated.length) {
       throw new Error('Findings catalog contains duplicate ids.');

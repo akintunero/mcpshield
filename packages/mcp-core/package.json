@@ -1,0 +1,26 @@
+{
+  "name": "@mcpshield/mcp-core",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@aws-sdk/client-sts": "^3.726.0",
+    "@mcpshield/plugin-sdk": "workspace:*",
+    "@mcpshield/types": "workspace:*",
+    "@mcpshield/shared": "workspace:*",
+    "@mcpshield/logger": "workspace:*"
+  }
+}

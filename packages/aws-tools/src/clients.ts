@@ -9,6 +9,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { CloudWatchClient } from '@aws-sdk/client-cloudwatch';
 import { CloudTrailClient } from '@aws-sdk/client-cloudtrail';
 import { EC2Client } from '@aws-sdk/client-ec2';
+import { KMSClient } from '@aws-sdk/client-kms';
 import { getConfig } from '@mcpshield/config';
 
 export function getClientConfig() {
@@ -68,3 +69,4 @@ export const dynamoDBClient = new DynamoDBClient(getClientConfig());
 export const cloudWatchClient = new CloudWatchClient(getClientConfig());
 export const cloudTrailClient = new CloudTrailClient(getClientConfig());
 export const ec2Client = new EC2Client(getClientConfig());
+export const kmsClient = new KMSClient(getClientConfig());

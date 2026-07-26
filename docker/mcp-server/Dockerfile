@@ -5,7 +5,7 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json tsconfig.json ./
 COPY packages ./packages
 COPY apps ./apps
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile # v2 - includes KMS client
 RUN pnpm build
 
 FROM node:22-alpine AS runtime

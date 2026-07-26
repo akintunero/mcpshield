@@ -19,6 +19,7 @@ const mockFinding = {
   severity: 'critical' as const,
   service: 's3' as const,
   resource: {
+    provider: 'aws' as const,
     service: 's3' as const,
     type: 'bucket' as const,
     id: 'vulnerable-bucket',

@@ -607,6 +607,34 @@ body {
   gap: 8px;
 }
 
+/* ── Category Breakdown ── */
+.category-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+.cat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+}
+.cat-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.cat-score {
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-primary);
+}
+.cat-score.low-score { color: #ef4444; }
+.cat-score.mid-score { color: #f97316; }
+.cat-score.high-score { color: #10b981; }
+
 .tab-btn {
   background: none;
   border: none;

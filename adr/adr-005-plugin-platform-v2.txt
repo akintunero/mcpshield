@@ -1,0 +1,109 @@
+ADR-005: Plugin Platform v2 — SDK, Host, Workflow Engine
+============================================================
+
+Status: Accepted
+Date: 2026-07-25
+Deciders: Architecture Team
+
+Context
+-------
+
+Phase 1 introduced the MCPPlugin interface, PluginRegistry, and
+CapabilityRouter. Plugins work but still require implementing a dozen
+interface methods, managing EventBus subscriptions manually, and
+handling errors/lifecycle/validation themselves.
+
+As we open the platform to external contributors, the friction of
+writing a plugin must approach zero. A contributor should write only
+the business logic. The platform should handle everything else.
+
+Decision
+--------
+
+Adopt a three-layer architecture with strict separation of concerns:
+
+  LAYER 1: Connectors
+    packages/connectors/* — thin wrappers around external SDKs/APIs
+    (AWS SDK, K8s API, GitHub API, Trivy CLI, etc.). Stateless.
+    Reusable by multiple plugins. No plugin-specific logic.
+
+  LAYER 2: Plugins
+    packages/plugins/* — provide security capabilities by composing
+    connectors and tools. Built with createPlugin() from the SDK.
+    No direct knowledge of MCP Core internals.
+
+  LAYER 3: MCP Core
+    packages/mcp-core/ — orchestrates plugins via PluginHost.
+    WorkflowEngine, PolicyEngine, ApprovalEngine, EventBus.
+    Never imports connectors or SDKs directly.
+
+Key Architectural Decisions
+---------------------------
+
+1. createPlugin() SDK
+   A single factory function replaces the 10+ method MCPPlugin interface.
+   Plugin authors write only: discover(ctx) {}, scan(ctx) {}, ...
+   The SDK auto-generates: logging, validation, events, error handling,
+   metrics, lifecycle registration.
+
+2. PluginHost
+   Every plugin runs inside a PluginHost instance. The host manages:
+   - Loading (dynamic import + manifest validation)
+   - Lifecycle (init → start → health → stop → shutdown)
+   - Resource limits (timeouts, memory caps)
+   - Crash recovery (restart on failure, backoff)
+   - Log isolation (per-plugin log stream)
+   - Event publishing (auto-emit from each capability call)
+
+3. WorkflowEngine
+   Workflows are DAGs (Directed Acyclic Graphs). The engine:
+   - Plans execution order based on dependency edges
+   - Resolves capabilities via PluginHost
+   - Runs independent tasks in parallel
+   - Handles failures gracefully (skip dependent tasks, notify)
+   - Produces an ExecutionReport
+
+4. Connectors vs. Plugins separation
+   Connectors: packages/connectors/aws-sdk, /kubernetes-api, /github-api
+   Plugins: packages/plugins/cloud/aws, /containers/kubernetes, /code/github
+   A plugin imports a connector. Two plugins can share one connector.
+
+5. Capability Negotiation
+   The planner queries each plugin's manifest.capabilities at runtime.
+   No hardcoded capability lists. If no plugin supports "remediate",
+   the planner skips remediation phase automatically.
+
+6. MarketplaceService
+   Interfaces for install/remove/upgrade/list/search plugins.
+   Local implementation uses filesystem + plugin.json registry.
+   Remote implementation (future) uses a plugin registry API.
+
+Consequences
+------------
+
+POSITIVE:
+  - Plugin authors write 10-30 lines of code, not hundreds
+  - Connectors are reusable across cloud, compliance, and reporting plugins
+  - Workflow engine enables complex multi-plugin orchestration
+  - PluginHost provides production-grade isolation without plugin changes
+  - Marketplace interfaces made platform ready for community ecosystem
+
+NEGATIVE:
+  - Additional abstraction layer (PluginHost) adds startup latency
+  - DAG-based workflows require more planning time for simple scans
+  - Backward compat: existing cloud-aws plugin needs migration to createPlugin()
+
+MITIGATIONS:
+  - PluginHost caches loaded plugins after init
+  - Simple scans use a single-node DAG (zero planning overhead)
+  - Old MCPPlugin interface still works; migration is opt-in
+
+Backward Compatibility
+-----------------------
+
+The existing cloud-aws plugin (packages/plugins/cloud-aws/) continues to
+work via a compatibility adapter in PluginHost. New createPlugin()-based
+plugins are preferred. Old interface is deprecated but not removed for
+6 months.
+
+Migration: Run `npx mcpshield migrate-plugin --from=mcp-plugin --to=create-plugin`

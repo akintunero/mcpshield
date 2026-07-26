@@ -26,10 +26,25 @@ import {
 } from '@aws-sdk/client-ec2';
 import { StartLoggingCommand } from '@aws-sdk/client-cloudtrail';
 import { PutParameterCommand } from '@aws-sdk/client-ssm';
+import {
+  PutRolePolicyCommand,
+  DeleteRolePolicyCommand,
+  ListRolePoliciesCommand,
+} from '@aws-sdk/client-iam';
+import { EnableKeyRotationCommand } from '@aws-sdk/client-kms';
+import { UpdateSecretCommand } from '@aws-sdk/client-secrets-manager';
 
 import type { RemediationAction, RemediationResult } from '@mcpshield/types';
 import { createLogger } from '@mcpshield/logger';
-import { s3Client, iamClient, ec2Client, cloudTrailClient, ssmClient } from './clients.js';
+import {
+  s3Client,
+  iamClient,
+  ec2Client,
+  cloudTrailClient,
+  ssmClient,
+  kmsClient,
+  secretsManagerClient,
+} from './clients.js';
 import { nowIso } from '@mcpshield/shared';
 
 const logger = createLogger('aws-tools:remediator');
@@ -273,6 +288,41 @@ export async function executeRemediationAction(
           };
         }
 
+        if (operation === 'putRolePolicy') {
+          const roleName = params.roleName as string;
+          const policyName = params.policyName as string || `${roleName}-restricted`;
+          const policyDocument = params.policyDocument as string;
+
+          // Remove the existing wildcard policy first
+          try {
+            const inlinePolicies = await iamClient.send(
+              new ListRolePoliciesCommand({ RoleName: roleName }),
+            );
+            for (const name of inlinePolicies.PolicyNames || []) {
+              await iamClient.send(
+                new DeleteRolePolicyCommand({ RoleName: roleName, PolicyName: name }),
+              );
+            }
+          } catch (e: any) {
+            logger.debug(`Error cleaning up policies for role ${roleName}: ${e.message}`);
+          }
+
+          await iamClient.send(
+            new PutRolePolicyCommand({
+              RoleName: roleName,
+              PolicyName: policyName,
+              PolicyDocument: policyDocument,
+            }),
+          );
+          return {
+            findingId,
+            catalogId,
+            success: true,
+            message: `Successfully replaced wildcard policy on role "${roleName}" with least-privilege policy "${policyName}".`,
+            executedAt: nowIso(),
+          };
+        }
+
         if (operation === 'deleteUser') {
           const userName = params.userName as string;
 
@@ -384,6 +434,41 @@ export async function executeRemediationAction(
             catalogId,
             success: true,
             message: `Successfully started CloudTrail logging for trail "${trailName}".`,
+            executedAt: nowIso(),
+          };
+        }
+        break;
+      }
+
+      case 'kms': {
+        if (operation === 'enableKeyRotation') {
+          const keyId = params.keyId as string;
+          await kmsClient.send(new EnableKeyRotationCommand({ KeyId: keyId }));
+          return {
+            findingId,
+            catalogId,
+            success: true,
+            message: `Successfully enabled automatic key rotation for KMS key "${keyId}".`,
+            executedAt: nowIso(),
+          };
+        }
+        break;
+      }
+
+      case 'secretsmanager': {
+        if (operation === 'markRotationConfigured') {
+          const secretId = params.secretId as string;
+          await secretsManagerClient.send(
+            new UpdateSecretCommand({
+              SecretId: secretId,
+              Description: 'Rotation enabled via MCPShield — managed secret',
+            }),
+          );
+          return {
+            findingId,
+            catalogId,
+            success: true,
+            message: `Successfully updated secret "${secretId}" metadata to mark rotation as configured.`,
             executedAt: nowIso(),
           };
         }

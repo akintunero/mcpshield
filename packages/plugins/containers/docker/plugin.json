@@ -1,0 +1,11 @@
+{
+  "id": "docker",
+  "name": "Docker",
+  "apiVersion": "v1",
+  "version": "1.0.0",
+  "author": "MCPShield Team",
+  "description": "Scans Docker images and containers for CVEs and misconfigurations",
+  "license": "MIT",
+  "category": "containers",
+  "capabilities": ["discover", "scan"]
+}

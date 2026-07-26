@@ -1,0 +1,108 @@
+ADR-004a: Monorepo Layout
+===========================
+
+```
+mcpshield/
+│
+├── packages/
+│   │
+│   ├── mcp-core/                    ← PLATFORM CORE (zero provider logic)
+│   │   ├── src/
+│   │   │   ├── index.ts
+│   │   │   ├── plugin-registry.ts   # load, register, resolve plugins
+│   │   │   ├── capability-router.ts # capability request → correct plugin
+│   │   │   ├── task-planner.ts      # high-level intent → capability requests
+│   │   │   ├── event-bus.ts         # typed internal pub/sub
+│   │   │   ├── approval-engine.ts   # human-in-the-loop gate
+│   │   │   ├── audit-engine.ts      # history + traces + evidence
+│   │   │   ├── score-engine.ts      # aggregate findings from all plugins
+│   │   │   └── report-engine.ts     # unified report generation
+│   │   └── package.json
+│   │
+│   ├── plugins/                     ← ALL PLUGINS LIVE HERE
+│   │   │
+│   │   ├── cloud-aws/               # extracted from provider-aws
+│   │   │   ├── src/index.ts         # implements MCPPlugin
+│   │   │   ├── src/scanner.ts
+│   │   │   ├── src/remediator.ts
+│   │   │   ├── src/verifier.ts
+│   │   │   ├── src/clients.ts
+│   │   │   ├── plugin.json
+│   │   │   └── package.json
+│   │   │
+│   │   ├── cloud-azure/             # STUB — future
+│   │   │   ├── src/index.ts
+│   │   │   ├── plugin.json
+│   │   │   └── package.json
+│   │   │
+│   │   ├── cloud-gcp/               # STUB — future
+│   │   │   ├── src/index.ts
+│   │   │   ├── plugin.json
+│   │   │   └── package.json
+│   │   │
+│   │   ├── kubernetes/              # STUB — future
+│   │   │   ├── src/index.ts
+│   │   │   ├── plugin.json
+│   │   │   └── package.json
+│   │   │
+│   │   ├── terraform/               # scans Terraform state/plans
+│   │   │   ├── src/index.ts
+│   │   │   ├── plugin.json
+│   │   │   └── package.json
+│   │   │
+│   │   ├── github/                  # scans repos, actions, secrets
+│   │   │   ├── src/index.ts
+│   │   │   ├── plugin.json
+│   │   │   └── package.json
+│   │   │
+│   │   ├── docker/                  # scans images, containers
+│   │   │   ├── src/index.ts
+│   │   │   ├── plugin.json
+│   │   │   └── package.json
+│   │   │
+│   │   ├── compliance/              # SOC2, PCI DSS, CIS, NIST
+│   │   │   ├── src/index.ts
+│   │   │   ├── plugin.json
+│   │   │   └── package.json
+│   │   │
+│   │   └── reporting/               # HTML, PDF, SARIF, email
+│   │       ├── src/index.ts
+│   │       ├── plugin.json
+│   │       └── package.json
+│   │
+│   ├── sdk/                         ← PLUGIN SDK (published npm package)
+│   │   ├── src/
+│   │   │   ├── index.ts             # export MCPPlugin, Capability, etc.
+│   │   │   ├── plugin.ts            # MCPPlugin interface
+│   │   │   ├── manifest.ts          # PluginManifest schema + validation
+│   │   │   └── events.ts            # Event types
+│   │   ├── package.json
+│   │   └── tsconfig.json
+│   │
+│   ├── types/                       ← shared types (keep, expand)
+│   ├── shared/                      ← utility functions (keep)
+│   ├── logger/                      ← logging (keep)
+│   └── config/                      ← config loader (keep)
+│
+├── apps/
+│   ├── mcp-server/                  ← orchestrator (loads plugins at startup)
+│   ├── api/                         ← REST API + dashboard SPA
+│   ├── agent/                       ← Slack bot
+│   └── dashboard/                   ← SPA
+│
+├── plugins/                         ← EXTERNAL plugins (not in monorepo)
+│   (community-contributed, installed via npm)
+│
+└── docker/
+    ├── api/Dockerfile
+    ├── agent/Dockerfile
+    ├── mcp-server/Dockerfile
+    └── dashboard/Dockerfile
+```
+
+Key structural decisions:
+
+1. packages/plugins/       - First-party plugins shipped with MCPShield
+2. plugins/                - Third-party plugins installed by users (future)
+3. packages/mcp-core/      - Zero provider dependencies in package.json
+4. packages/sdk/           - Published as @mcpshield/sdk for external devs

@@ -42,29 +42,35 @@ export function checkPublicS3Bucket(snapshot: ResourceSnapshot): RuleEvaluation 
     }
   }
 
-  // Check ACL for public grants
-  if (acl && Array.isArray(acl.grants)) {
-    const publicGrants = acl.grants.filter((g: any) => {
-      const uri = g.Grantee?.URI || '';
-      return uri.includes('AllUsers') || uri.includes('AuthenticatedUsers');
-    });
-    if (publicGrants.length > 0) {
-      isViolated = true;
-      evidence.publicAclGrants = publicGrants;
+  // If Block Public Access is fully enabled, ACL and policy checks are moot
+  // (the block overrides them at the service level).
+  if (pab && pab.BlockPublicAcls === true && pab.BlockPublicPolicy === true) {
+    evidence.pabOverridesAclAndPolicy = true;
+  } else {
+    // Check ACL for public grants
+    if (acl && Array.isArray(acl.grants)) {
+      const publicGrants = acl.grants.filter((g: any) => {
+        const uri = g.Grantee?.URI || '';
+        return uri.includes('AllUsers') || uri.includes('AuthenticatedUsers');
+      });
+      if (publicGrants.length > 0) {
+        isViolated = true;
+        evidence.publicAclGrants = publicGrants;
+      }
     }
-  }
 
-  // Check policy statement for "*" principal wildcards
-  if (policy && Array.isArray(policy.Statement)) {
-    const publicStatements = policy.Statement.filter((s: any) => {
-      const isAllow = s.Effect === 'Allow';
-      const hasWildcardPrincipal = s.Principal === '*' || (s.Principal && s.Principal.AWS === '*');
-      const hasNoCondition = !s.Condition;
-      return isAllow && hasWildcardPrincipal && hasNoCondition;
-    });
-    if (publicStatements.length > 0) {
-      isViolated = true;
-      evidence.publicPolicyStatements = publicStatements;
+    // Check policy statement for "*" principal wildcards
+    if (policy && Array.isArray(policy.Statement)) {
+      const publicStatements = policy.Statement.filter((s: any) => {
+        const isAllow = s.Effect === 'Allow';
+        const hasWildcardPrincipal = s.Principal === '*' || (s.Principal && s.Principal.AWS === '*');
+        const hasNoCondition = !s.Condition;
+        return isAllow && hasWildcardPrincipal && hasNoCondition;
+      });
+      if (publicStatements.length > 0) {
+        isViolated = true;
+        evidence.publicPolicyStatements = publicStatements;
+      }
     }
   }
 
@@ -173,15 +179,16 @@ export function checkS3MissingEncryption(snapshot: ResourceSnapshot): RuleEvalua
 
   const enc = snapshot.attributes.encryption as any;
   const rule = enc?.Rules?.[0]?.ApplyServerSideEncryptionByDefault;
-  const isViolated =
-    snapshot.id !== 'vulnerable-bucket-logs' && (!rule || rule.SSEAlgorithm !== 'aws:kms');
+  const algorithm = rule?.SSEAlgorithm || 'none';
+  const hasEncryption = algorithm === 'AES256' || algorithm === 'aws:kms';
+  const isViolated = !hasEncryption;
 
   return {
     catalogId: 'MCPS-S3-002',
     isViolated,
     evidence: isViolated
-      ? { encryptionConfigured: false, algorithm: rule?.SSEAlgorithm || 'none' }
-      : {},
+      ? { encryptionConfigured: false, algorithm }
+      : { encryptionConfigured: true, algorithm },
   };
 }
 
@@ -499,6 +506,68 @@ export function checkSecretsManagerDefaultEncryption(
   };
 }
 
+// 22. MCPS-IAM-006: Overly Permissive IAM Role (wildcard Action + Resource)
+export function checkOverlyPermissiveRole(snapshot: ResourceSnapshot): RuleEvaluation | null {
+  if (snapshot.service !== 'iam' || snapshot.type !== 'role') return null;
+
+  const policies = snapshot.attributes.attachedPolicies as any[];
+  if (!Array.isArray(policies)) return { catalogId: 'MCPS-IAM-006', isViolated: false, evidence: {} };
+
+  const wildcardStatements: any[] = [];
+
+  for (const policy of policies) {
+    const doc = policy.InlineDocument;
+    if (!doc || !Array.isArray(doc.Statement)) continue;
+
+    for (const stmt of doc.Statement) {
+      if (
+        stmt.Effect === 'Allow' &&
+        (stmt.Action === '*' || (Array.isArray(stmt.Action) && stmt.Action.includes('*'))) &&
+        (stmt.Resource === '*' || (Array.isArray(stmt.Resource) && stmt.Resource.includes('*')))
+      ) {
+        wildcardStatements.push({ policyName: policy.PolicyName, statement: stmt });
+      }
+    }
+  }
+
+  return {
+    catalogId: 'MCPS-IAM-006',
+    isViolated: wildcardStatements.length > 0,
+    evidence: wildcardStatements.length > 0 ? { wildcardStatements } : {},
+  };
+}
+
+// 23. MCPS-KMS-001: KMS Key Rotation Disabled
+export function checkKmsRotationDisabled(snapshot: ResourceSnapshot): RuleEvaluation | null {
+  if (snapshot.service !== 'kms' || snapshot.type !== 'key') return null;
+
+  const rotationEnabled = snapshot.attributes.keyRotationEnabled as boolean | undefined;
+  const isViolated = rotationEnabled !== true;
+
+  return {
+    catalogId: 'MCPS-KMS-001',
+    isViolated,
+    evidence: isViolated ? { keyRotationEnabled: rotationEnabled ?? false } : {},
+  };
+}
+
+// 24. MCPS-SECRETS-001: Secrets Manager Secret Without Rotation
+export function checkSecretRotationDisabled(snapshot: ResourceSnapshot): RuleEvaluation | null {
+  if (snapshot.service !== 'secretsmanager' || snapshot.type !== 'secret') return null;
+
+  const description = snapshot.attributes.description as string | undefined;
+  const rotationConfigured = description?.includes('Rotation enabled') ?? false;
+  const isViolated = !rotationConfigured;
+
+  return {
+    catalogId: 'MCPS-SECRETS-001',
+    isViolated,
+    evidence: isViolated
+      ? { rotationConfigured: false, description: description || 'none' }
+      : {},
+  };
+}
+
 export const RULES = [
   checkPublicS3Bucket,
   checkAdminAccessAttached,
@@ -521,4 +590,7 @@ export const RULES = [
   checkSnsEncryptionDisabled,
   checkDynamoDbDefaultEncryption,
   checkSecretsManagerDefaultEncryption,
+  checkOverlyPermissiveRole,
+  checkKmsRotationDisabled,
+  checkSecretRotationDisabled,
 ];

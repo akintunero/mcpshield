@@ -13,6 +13,12 @@ import { readState } from './state.js';
 import { computeSecurityScore } from '@mcpshield/scoring-engine';
 import { createMcpClient } from './mcp-client.js';
 import { getLlmProvider } from './llm.js';
+import { defaultRegistry } from '@mcpshield/finding-engine';
+import { RBAC } from '@mcpshield/mcp-core';
+
+const rbac = new RBAC();
+rbac.assignRole('api-key-holder', 'admin');
+rbac.assignRole('anonymous', 'viewer');
 
 const logger = createLogger('api:main');
 const __filename = fileURLToPath(import.meta.url);
@@ -93,7 +99,14 @@ async function main() {
   });
 
   await fastify.register(cors, { origin: parseCorsOrigins(config.security.corsOrigins) });
-  await fastify.register(rateLimit, { max: config.security.rateLimitMax, timeWindow: '1 minute' });
+  await fastify.register(rateLimit, {
+    max: config.security.rateLimitMax,
+    timeWindow: '1 minute',
+    keyGenerator: (request) => {
+      const auth = request.headers.authorization || '';
+      return auth; // rate limit per API key
+    },
+  });
 
   fastify.addHook('preHandler', async (request, reply) => {
     metrics.requestsTotal++;
@@ -132,6 +145,11 @@ async function main() {
     };
   });
 
+  fastify.get('/api/catalog', async () => {
+    const entries = defaultRegistry.all();
+    return { catalog: entries, total: entries.length };
+  });
+
   fastify.get('/api/state', async (_request, reply) => {
     try {
       const state = await readState();
@@ -140,6 +158,8 @@ async function main() {
         score,
         lastScan: state.lastScan,
         findings: state.allFindings,
+        openFindings: state.allFindings.filter((f: any) => f.status === 'open'),
+        resolvedFindings: state.allFindings.filter((f: any) => f.status === 'resolved'),
         approvals: Object.values(state.approvals),
         remediations: state.remediationResults,
       };

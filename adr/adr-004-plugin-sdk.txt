@@ -1,0 +1,305 @@
+ADR-004b: Plugin SDK Specification
+====================================
+
+The Plugin SDK defines the contract between mcp-core and every plugin.
+
+1. MCPPlugin Interface
+-----------------------
+
+Every plugin in packages/plugins/ MUST export a default class implementing
+this interface:
+
+```typescript
+// packages/sdk/src/plugin.ts
+
+import type { Capability, HealthStatus, Resource, Finding,
+  RemediationResult, VerificationResult, PluginManifest } from './manifest.js';
+
+export interface MCPPlugin {
+  /** Unique plugin identifier, e.g. "cloud-aws", "kubernetes". */
+  readonly id: string;
+
+  /** Loaded plugin manifest. */
+  readonly manifest: PluginManifest;
+
+  /** Initialize plugin (called once at startup). */
+  init(context: PluginContext): Promise<void>;
+
+  /** List all capabilities this plugin provides. */
+  capabilities(): Capability[];
+
+  /** Check connectivity to the target system. */
+  health(): Promise<HealthStatus>;
+
+  /** Discover resources (lightweight listing). */
+  discover(options?: Record<string, unknown>): Promise<Resource[]>;
+
+  /** Deep scan discovered resources for vulnerabilities. */
+  scan(options?: Record<string, unknown>): Promise<Finding[]>;
+
+  /** Execute a remediation action. */
+  remediate(finding: Finding): Promise<RemediationResult>;
+
+  /** Verify a finding is resolved. */
+  verify(catalogId: string, resourceId: string): Promise<VerificationResult>;
+
+  /** Generate human-readable explanation. */
+  explain(finding: Finding): Promise<string>;
+
+  /** Graceful shutdown. */
+  shutdown?(): Promise<void>;
+}
+
+export interface PluginContext {
+  eventBus: EventBus;
+  logger: Logger;
+  config: Record<string, unknown>;
+  stateDir: string;
+}
+```
+
+2. Capability Model
+--------------------
+
+```typescript
+// packages/sdk/src/manifest.ts
+
+export interface Capability {
+  /** Capability identifier, e.g. "scan.s3.buckets", "remediate.iam.policy" */
+  id: string;
+
+  /** Human-readable name. */
+  name: string;
+
+  /** Verb: scan | remediate | verify | explain | discover */
+  verb: 'scan' | 'remediate' | 'verify' | 'explain' | 'discover';
+
+  /** Resource category this capability applies to. */
+  resourceType: string;
+
+  /** Estimated duration for planning purposes. */
+  estimatedDuration?: string;
+}
+```
+
+3. Plugin Manifest (plugin.json)
+----------------------------------
+
+Every plugin directory MUST contain a plugin.json at its root:
+
+```json
+{
+  "id": "cloud-aws",
+  "name": "AWS Cloud",
+  "version": "1.0.0",
+  "author": "MCPShield Team",
+  "description": "Scans AWS accounts for security misconfigurations",
+  "license": "MIT",
+  "homepage": "https://github.com/mcpshield/mcpshield",
+  "repository": "https://github.com/mcpshield/mcpshield.git",
+  "entrypoint": "./dist/index.js",
+  "capabilities": [
+    { "id": "scan.s3.buckets", "name": "Scan S3 Buckets", "verb": "scan", "resourceType": "s3:bucket" },
+    { "id": "remediate.s3.public-block", "name": "Block Public S3 Access", "verb": "remediate", "resourceType": "s3:bucket" },
+    { "id": "verify.s3.public-block", "name": "Verify S3 Access Block", "verb": "verify", "resourceType": "s3:bucket" }
+  ],
+  "dependencies": {},
+  "config": {
+    "accountIds": { "type": "array", "required": false },
+    "regions": { "type": "array", "required": false, "default": ["us-east-1"] }
+  }
+}
+```
+
+4. Finding Model
+-----------------
+
+Unified finding format across ALL plugins:
+
+```typescript
+export interface Finding {
+  id: string;                    // unique: "cloud-aws/s3-001/my-bucket"
+  pluginId: string;              // which plugin produced this
+  capabilityId: string;          // which capability detected it
+  title: string;
+  description: string;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  resource: Resource;
+  remediation: {
+    summary: string;
+    terraform?: string;
+    cli?: string;
+  };
+  evidence: Record<string, unknown>;
+  riskScore: number;
+  detectedAt: string;
+  status: 'open' | 'remediating' | 'resolved';
+}
+```
+
+5. Plugin Discovery
+--------------------
+
+At startup, mcp-core scans packages/plugins/ for directories containing
+plugin.json. For each:
+
+  1. Read plugin.json
+  2. Validate schema
+  3. Import entrypoint (dynamic import)
+  4. Call init() with PluginContext
+  5. Register capabilities in Capability Registry
+  6. Subscribe to relevant events
+
+```typescript
+// Discovery algorithm (in mcp-core/src/plugin-registry.ts)
+
+async function discoverPlugins(pluginDirs: string[]): Promise<MCPPlugin[]> {
+  const plugins: MCPPlugin[] = [];
+  for (const dir of pluginDirs) {
+    const manifestPath = join(dir, 'plugin.json');
+    if (!existsSync(manifestPath)) continue;
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    const pluginModule = await import(join(dir, manifest.entrypoint));
+    const plugin: MCPPlugin = new pluginModule.default();
+    plugin.manifest = manifest;
+    plugins.push(plugin);
+  }
+  return plugins;
+}
+```
+
+6. Event Bus
+-------------
+
+```typescript
+// packages/sdk/src/events.ts
+
+export type EventType =
+  | 'scan.started' | 'scan.completed'
+  | 'finding.detected'
+  | 'remediation.requested' | 'remediation.approved'
+  | 'remediation.executed' | 'remediation.failed'
+  | 'verification.completed'
+  | 'plugin.registered' | 'plugin.errored';
+
+export interface McpEvent {
+  type: EventType;
+  timestamp: string;
+  pluginId?: string;
+  data: Record<string, unknown>;
+}
+
+export interface EventBus {
+  emit(event: McpEvent): void;
+  on(type: EventType, handler: (event: McpEvent) => void): void;
+  off(type: EventType, handler: (event: McpEvent) => void): void;
+}
+```
+
+7. Capability Router
+---------------------
+
+```typescript
+// packages/mcp-core/src/capability-router.ts
+
+class CapabilityRouter {
+  private registry = new Map<string, { plugin: MCPPlugin; cap: Capability }>();
+
+  register(plugin: MCPPlugin): void {
+    for (const cap of plugin.capabilities()) {
+      this.registry.set(cap.id, { plugin, cap });
+    }
+  }
+
+  /** Find the best plugin for a given capability verb + resource type. */
+  resolve(verb: string, resourceType: string): { plugin: MCPPlugin; cap: Capability } | null {
+    for (const [_, entry] of this.registry) {
+      if (entry.cap.verb === verb && entry.cap.resourceType === resourceType) {
+        return entry;
+      }
+    }
+    return null;
+  }
+
+  /** Find all plugins that can handle a resource type. */
+  resolveAll(resourceType: string): { plugin: MCPPlugin; cap: Capability }[] {
+    const results: { plugin: MCPPlugin; cap: Capability }[] = [];
+    for (const [_, entry] of this.registry) {
+      if (entry.cap.resourceType === resourceType) {
+        results.push(entry);
+      }
+    }
+    return results;
+  }
+}
+```
+
+8. Task Planner
+----------------
+
+The Task Planner bridges AI intent to capability execution:
+
+```typescript
+// packages/mcp-core/src/task-planner.ts
+
+interface TaskPlan {
+  steps: TaskStep[];
+}
+
+interface TaskStep {
+  capabilityId: string;
+  pluginId: string;
+  params: Record<string, unknown>;
+  dependsOn?: string[];  // step IDs that must complete first
+}
+
+class TaskPlanner {
+  constructor(private router: CapabilityRouter) {}
+
+  /** Given AI intent, produce an execution plan. */
+  plan(intent: string, context: Record<string, unknown>): TaskPlan {
+    // Parse intent into required resource types
+    // Look up capabilities for each resource type
+    // Build dependency graph
+    // Return ordered TaskPlan
+  }
+
+  /** Execute a plan and merge results. */
+  async execute(plan: TaskPlan): Promise<ExecutionContext> {
+    // Run parallel steps with dependency resolution
+    // Collect findings, merge, deduplicate
+    // Return unified result
+  }
+}
+```
+
+9. Out-of-the-Box Plugin Capabilities
+---------------------------------------
+
+Plugins shipped with MCPShield cover:
+
+| Plugin      | Capabilities                                    |
+|-------------|------------------------------------------------|
+| cloud-aws   | scan/verify/remediate for 12 AWS services       |
+| cloud-azure | scan/verify/remediate for Azure resources       |
+| cloud-gcp   | scan/verify/remediate for GCP resources         |
+| kubernetes  | scan pods, namespaces, RBAC, secrets, network   |
+| terraform   | scan Terraform plans for security issues        |
+| github      | scan repos, actions, secrets, issues            |
+| docker      | scan images for CVEs, misconfigurations         |
+| compliance  | map findings to SOC2/PCI-DSS/CIS controls       |
+| reporting   | generate Markdown/HTML/PDF/SARIF reports        |
+
+10. External Plugin Development
+--------------------------------
+
+Third-party developers create plugins by:
+
+  1. Create a directory with plugin.json
+  2. Install @mcpshield/sdk
+  3. Implement MCPPlugin
+  4. npm publish
+  5. User installs: npm install @mcpshield/plugin-<name>
+  6. MCPShield discovers it automatically
+
+No core code changes required.

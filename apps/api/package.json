@@ -21,7 +21,9 @@
     "@mcpshield/logger": "workspace:*",
     "@mcpshield/config": "workspace:*",
     "@mcpshield/scoring-engine": "workspace:*",
+    "@mcpshield/mcp-core": "workspace:*",
     "@mcpshield/aws-tools": "workspace:*",
+    "@mcpshield/finding-engine": "workspace:*",
     "@mcpshield/security-engine": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.0.1",
     "@mcpshield/llm": "workspace:*"

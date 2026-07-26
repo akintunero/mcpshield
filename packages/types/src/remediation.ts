@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AwsServiceSchema, ResourceRefSchema } from './aws.js';
+import { ResourceRefSchema } from './aws.js';
 
 /** The kind of remediation artifact produced by a generator. */
 export const RemediationKindSchema = z.enum(['terraform', 'aws-cli']);
@@ -26,7 +26,7 @@ export const RemediationActionSchema = z.object({
   findingId: z.string().min(1),
   catalogId: z.string().min(1),
   description: z.string().min(1),
-  service: AwsServiceSchema,
+  service: z.string(),
   /** Logical operation name understood by the aws-tools remediation layer. */
   operation: z.string().min(1),
   params: z.record(z.string(), z.unknown()).default({}),

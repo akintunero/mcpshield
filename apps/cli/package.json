@@ -1,0 +1,18 @@
+{
+  "name": "@mcpshield/cli",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "mcpshield": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@mcpshield/plugin-sdk": "workspace:*",
+    "@mcpshield/mcp-core": "workspace:*",
+    "@mcpshield/logger": "workspace:*"
+  }
+}

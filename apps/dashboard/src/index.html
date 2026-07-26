@@ -74,6 +74,7 @@
           <div class="scan-meta">
             <p><strong>Last Scanned:</strong> <span id="last-scan-time">Never</span></p>
             <p><strong>Total Resources:</strong> <span id="resources-count">0</span></p>
+            <p><strong>Score Delta:</strong> <span id="score-delta">-</span></p>
           </div>
 
           <hr class="card-divider" />
@@ -125,6 +126,35 @@
               </div>
             </div>
           </div>
+
+          <hr class="card-divider" />
+
+          <div class="category-breakdown">
+            <div class="cat-row">
+              <span class="cat-label">Public Exposure</span>
+              <span class="cat-score" id="cat-exposure">-</span>
+            </div>
+            <div class="cat-row">
+              <span class="cat-label">Identity & Access</span>
+              <span class="cat-score" id="cat-identity">-</span>
+            </div>
+            <div class="cat-row">
+              <span class="cat-label">Encryption</span>
+              <span class="cat-score" id="cat-encryption">-</span>
+            </div>
+            <div class="cat-row">
+              <span class="cat-label">Secrets</span>
+              <span class="cat-score" id="cat-secrets">-</span>
+            </div>
+            <div class="cat-row">
+              <span class="cat-label">Recovery</span>
+              <span class="cat-score" id="cat-recovery">-</span>
+            </div>
+            <div class="cat-row">
+              <span class="cat-label">Logging</span>
+              <span class="cat-score" id="cat-logging">-</span>
+            </div>
+          </div>
         </section>
 
         <!-- Findings List Section -->
@@ -133,10 +163,12 @@
             <h2>Vulnerabilities Inventory</h2>
             <div class="filters">
               <button class="filter-btn active" data-filter="all">All</button>
+              <button class="filter-btn" data-filter="open">Open</button>
               <button class="filter-btn" data-filter="critical">Critical</button>
               <button class="filter-btn" data-filter="high">High</button>
               <button class="filter-btn" data-filter="medium">Medium</button>
               <button class="filter-btn" data-filter="low">Low</button>
+              <button class="filter-btn" data-filter="resolved">Resolved</button>
             </div>
           </div>
 

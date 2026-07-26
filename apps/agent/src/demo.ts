@@ -22,6 +22,7 @@ export function loadDemoData(): DemoData {
       severity: 'critical',
       service: 's3',
       resource: {
+        provider: 'aws',
         service: 's3',
         type: 'bucket',
         id: 'vulnerable-bucket',
@@ -41,6 +42,7 @@ export function loadDemoData(): DemoData {
       severity: 'critical',
       service: 'iam',
       resource: {
+        provider: 'aws',
         service: 'iam',
         type: 'user',
         id: 'admin-user',
@@ -60,6 +62,7 @@ export function loadDemoData(): DemoData {
       severity: 'critical',
       service: 'iam',
       resource: {
+        provider: 'aws',
         service: 'iam',
         type: 'user',
         id: 'admin-user',
@@ -79,6 +82,7 @@ export function loadDemoData(): DemoData {
       severity: 'high',
       service: 'ec2',
       resource: {
+        provider: 'aws',
         service: 'ec2',
         type: 'security-group',
         id: 'sg-vulnerable',
@@ -98,6 +102,7 @@ export function loadDemoData(): DemoData {
       severity: 'high',
       service: 'ec2',
       resource: {
+        provider: 'aws',
         service: 'ec2',
         type: 'security-group',
         id: 'sg-vulnerable',
@@ -117,6 +122,7 @@ export function loadDemoData(): DemoData {
       severity: 'high',
       service: 's3',
       resource: {
+        provider: 'aws',
         service: 's3',
         type: 'bucket',
         id: 'vulnerable-bucket',
@@ -136,6 +142,7 @@ export function loadDemoData(): DemoData {
       severity: 'high',
       service: 's3',
       resource: {
+        provider: 'aws',
         service: 's3',
         type: 'bucket',
         id: 'vulnerable-bucket',
@@ -155,6 +162,7 @@ export function loadDemoData(): DemoData {
       severity: 'high',
       service: 'cloudtrail',
       resource: {
+        provider: 'aws',
         service: 'cloudtrail',
         type: 'trail',
         id: 'mcpshield-trail',
@@ -174,6 +182,7 @@ export function loadDemoData(): DemoData {
       severity: 'medium',
       service: 'iam',
       resource: {
+        provider: 'aws',
         service: 'iam',
         type: 'password-policy',
         id: 'account-password-policy',
@@ -192,6 +201,7 @@ export function loadDemoData(): DemoData {
       severity: 'medium',
       service: 'iam',
       resource: {
+        provider: 'aws',
         service: 'iam',
         type: 'user',
         id: 'unused-user',
@@ -211,6 +221,7 @@ export function loadDemoData(): DemoData {
       severity: 'medium',
       service: 'iam',
       resource: {
+        provider: 'aws',
         service: 'iam',
         type: 'user',
         id: 'admin-user',
@@ -230,6 +241,7 @@ export function loadDemoData(): DemoData {
       severity: 'medium',
       service: 's3',
       resource: {
+        provider: 'aws',
         service: 's3',
         type: 'bucket',
         id: 'vulnerable-bucket',
@@ -249,6 +261,7 @@ export function loadDemoData(): DemoData {
       severity: 'low',
       service: 's3',
       resource: {
+        provider: 'aws',
         service: 's3',
         type: 'bucket',
         id: 'vulnerable-bucket',
@@ -268,6 +281,7 @@ export function loadDemoData(): DemoData {
       severity: 'low',
       service: 's3',
       resource: {
+        provider: 'aws',
         service: 's3',
         type: 'bucket',
         id: 'vulnerable-bucket',
@@ -287,6 +301,7 @@ export function loadDemoData(): DemoData {
       severity: 'low',
       service: 'ec2',
       resource: {
+        provider: 'aws',
         service: 'ec2',
         type: 'security-group',
         id: 'sg-vulnerable',

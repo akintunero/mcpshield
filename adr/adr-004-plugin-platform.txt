@@ -1,0 +1,80 @@
+ADR-004: Plugin-First Architecture
+====================================
+
+Status: Proposed
+Date: 2026-07-25
+Deciders: Architecture Team
+
+Context
+-------
+
+MCPShield was originally built as an AWS-specific CSPM tool with hardcoded
+service mappings. During the workshop phase, we introduced a CloudProvider
+interface to support multi-cloud, but this still assumed "cloud" as the
+primary abstraction — it couldn't naturally represent Kubernetes, GitHub,
+Terraform, or Docker security findings without awkward mapping.
+
+The AI agent currently has provider-specific knowledge baked into its
+prompts and tool descriptions. Adding a new provider requires modifying
+the MCP server, the Slack handler, and potentially the LLM prompts.
+
+Decision
+--------
+
+Adopt a plugin-first architecture where every security capability is a
+plugin. The core platform (mcp-core) knows nothing about AWS, Kubernetes,
+or any specific technology. It only knows about plugins and capabilities.
+
+Key Architectural Principles:
+
+1. PLUGIN CONTRACT
+   Every plugin implements MCPPlugin. The core never imports provider-specific
+   code. Plugins are loaded dynamically at startup via filesystem discovery.
+
+2. CAPABILITY ROUTING
+   Instead of hardcoded switch statements (mapFindingToRemediation), the AI
+   emits capability requests. The Capability Resolver finds the plugin that
+   can handle the request and routes it.
+
+3. EVENT BUS
+   Plugins communicate via an internal event bus (EventEmitter-based).
+   Events are typed and versioned. Plugins subscribe to events they care about.
+
+4. TASK PLANNER
+   The AI sends high-level intent (e.g., "scan my infrastructure") to the
+   Task Planner, which decomposes it into capability requests, dispatches
+   to plugins, and merges results.
+
+5. CORE HAS ZERO PROVIDER LOGIC
+   packages/mcp-core contains only: plugin registry, event bus, task planner,
+   approval engine, audit engine, score engine. No S3, no IAM, no EC2.
+
+Consequences
+------------
+
+POSITIVE:
+  - Adding a new provider = creating a new plugin dir. No core changes.
+  - Community contributors can write plugins without fork maintenance.
+  - AI becomes genuinely provider-agnostic — it reasons over capabilities.
+  - Parallel scan across all plugins (cloud + k8s + github + terraform).
+  - Unified finding format regardless of source.
+
+NEGATIVE:
+  - Initial migration cost: extract existing AWS code into first plugin.
+  - Runtime overhead of event bus and capability resolution.
+  - Plugin API must be stable before community adoption.
+  - Need plugin discovery + versioning + dependency management.
+
+RISKS:
+  - Plugin API churn during early development.
+  - Performance of capability resolution for large deployments.
+  - Security: plugins run in-process, a bad plugin can crash the platform.
+    Mitigation: sandboxed plugin runner in future iterations.
+
+Backwards Compatibility
+-----------------------
+
+The existing @mcpshield/aws-tools package will be re-exported as a thin
+wrapper around the new @mcpshield/plugins/cloud-aws package during the
+migration period. All existing MCP tool names and input schemas remain
+unchanged. External consumers see no breaking changes.

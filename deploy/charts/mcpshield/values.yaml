@@ -1,0 +1,53 @@
+# MCPShield Helm Chart Values
+
+replicaCount: 1
+
+images:
+  mcpServer:
+    repository: ghcr.io/mcpshield/mcp-server
+    tag: latest
+    pullPolicy: IfNotPresent
+  api:
+    repository: ghcr.io/mcpshield/api
+    tag: latest
+    pullPolicy: IfNotPresent
+  agent:
+    repository: ghcr.io/mcpshield/agent
+    tag: latest
+    pullPolicy: IfNotPresent
+
+config:
+  logLevel: info
+  nodeEnv: production
+  mcpTransport: http
+  mcpHttpPort: 7801
+  apiPort: 7802
+  apiHost: "0.0.0.0"
+
+secrets:
+  mcpApiKey: ""
+  apiKey: ""
+  slackBotToken: ""
+  slackAppToken: ""
+  slackSigningSecret: ""
+
+resources:
+  mcpServer:
+    limits: { memory: "512Mi", cpu: "500m" }
+    requests: { memory: "256Mi", cpu: "250m" }
+  api:
+    limits: { memory: "512Mi", cpu: "500m" }
+    requests: { memory: "256Mi", cpu: "250m" }
+  agent:
+    limits: { memory: "256Mi", cpu: "250m" }
+    requests: { memory: "128Mi", cpu: "100m" }
+
+ingress:
+  enabled: false
+  host: mcpshield.example.com
+  tls: true
+
+persistence:
+  enabled: true
+  size: 1Gi
+  storageClass: ""

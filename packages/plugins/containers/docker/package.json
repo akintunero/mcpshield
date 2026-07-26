@@ -1,0 +1,9 @@
+{
+  "name": "@mcpshield/docker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": { "build": "tsc" },
+  "dependencies": { "@mcpshield/plugin-sdk": "workspace:*" }
+}

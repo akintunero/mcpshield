@@ -1,15 +1,20 @@
 import { z } from 'zod';
-import { AwsServiceSchema } from './aws.js';
+import { ProviderSchema } from './aws.js';
 import { FindingSchema } from './finding.js';
 import { SecurityScoreSchema } from './score.js';
 
-/** A point-in-time snapshot of a single AWS resource captured during a scan. */
+/** A point-in-time snapshot of a single resource captured during a scan. */
 export const ResourceSnapshotSchema = z.object({
-  service: AwsServiceSchema,
+  provider: ProviderSchema.default('aws'),
+  service: z.string(),
   type: z.string(),
   id: z.string(),
+  /** Deprecated: use nativeRef. */
   arn: z.string().optional(),
+  /** Deprecated: use location. */
   region: z.string().optional(),
+  nativeRef: z.string().optional(),
+  location: z.string().optional(),
   attributes: z.record(z.string(), z.unknown()).default({}),
   tags: z.record(z.string(), z.string()).default({}),
 });

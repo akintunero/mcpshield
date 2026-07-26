@@ -1,14 +1,26 @@
-graph LR
-    MCP[MCPShield Core\nCloudProvider Interface] --> AWS[AWS Plugin\n✅ Implemented]
-    MCP --> Azure[Azure Plugin\n🔜 Planned]
-    MCP --> GCP[GCP Plugin\n🔜 Planned]
-    MCP --> K8s[Kubernetes Plugin\n🔜 Planned]
-    MCP --> GH[GitHub Plugin\n🔜 Planned]
-    MCP --> TF[Terraform Plugin\n🔜 Planned]
-    style MCP fill:#1e40af,color:#fff,stroke:#1e3a8a
-    style AWS fill:#059669,color:#fff,stroke:#047857
-    style Azure fill:#2563eb,color:#fff
-    style GCP fill:#d97706,color:#fff
-    style K8s fill:#7c3aed,color:#fff
-    style GH fill:#1f2937,color:#fff
-    style TF fill:#4338ca,color:#fff
+flowchart LR
+    subgraph PluginPackage["Plugin Package"]
+        direction TB
+        Manifest["plugin.json"]
+        Code["src/index.ts\nexport default createPlugin({...})"]
+        Tests["src/index.test.ts\ndescribePlugin()"]
+    end
+    subgraph SDK["@mcpshield/plugin-sdk"]
+        CP["createPlugin()\n• validates manifest\n• checks API version\n• wraps handlers"]
+        DP["describePlugin()\n• contract tests\n• compliance report"]
+        Types["Types\n• Finding\n• PluginContext\n• CapabilityHandlers"]
+    end
+    subgraph Host["@mcpshield/mcp-core"]
+        PH["PluginHost\n• load plugin.json\n• init plugin\n• health checks"]
+        Sandbox["Sandbox\n• worker thread\n• memory limits\n• timeouts"]
+        WE["WorkflowEngine\n• DAG execution\n• capability routing"]
+    end
+    Code -->|import| CP
+    Tests -->|import| DP
+    CP -->|register| PH
+    PH -->|run in| Sandbox
+    Sandbox -->|results| WE
+    Manifest -->|discovered by| PH
+    style PluginPackage fill:#f0fdf4,stroke:#059669
+    style SDK fill:#fef3c7,stroke:#d97706
+    style Host fill:#ede9fe,stroke:#6d28d9

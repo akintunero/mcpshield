@@ -1,0 +1,29 @@
+{
+  "name": "@mcpshield/cloud-aws",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "plugin.json"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@mcpshield/plugin-sdk": "workspace:*",
+    "@mcpshield/aws-tools": "workspace:*",
+    "@mcpshield/security-engine": "workspace:*",
+    "@mcpshield/scoring-engine": "workspace:*",
+    "@mcpshield/config": "workspace:*",
+    "@mcpshield/logger": "workspace:*",
+    "@mcpshield/shared": "workspace:*",
+    "@mcpshield/types": "workspace:*"
+  }
+}

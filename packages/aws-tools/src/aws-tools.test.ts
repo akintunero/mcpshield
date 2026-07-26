@@ -8,5 +8,6 @@ describe('aws-tools package', () => {
     expect(mod.s3Client).toBeDefined();
     expect(mod.iamClient).toBeDefined();
     expect(mod.ec2Client).toBeDefined();
-  });
+    expect(mod.verifyFinding).toBeDefined();
+  }, 15000);
 });

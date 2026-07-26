@@ -9,7 +9,8 @@ function makeFinding(overrides: Partial<Finding> = {}): Finding {
     title: 'Test Finding',
     severity: 'high',
     service: 's3',
-    resource: { service: 's3', type: 'bucket', id: 'test-bucket', region: 'us-east-1' },
+    resource: {
+        provider: 'aws', service: 's3', type: 'bucket', id: 'test-bucket', region: 'us-east-1' },
     description: 'A test finding',
     evidence: {},
     riskScore: 50,

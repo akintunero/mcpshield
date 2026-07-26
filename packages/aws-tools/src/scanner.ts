@@ -164,6 +164,7 @@ export async function scanS3Buckets(): Promise<ResourceSnapshot[]> {
       }
 
       snapshots.push({
+        provider: 'aws',
         service: 's3',
         type: 'bucket',
         id: bucketName,
@@ -187,6 +188,7 @@ export async function scanIAM(): Promise<ResourceSnapshot[]> {
   try {
     const policyRes = await iamClient.send(new GetAccountPasswordPolicyCommand({}));
     snapshots.push({
+        provider: 'aws',
       service: 'iam',
       type: 'password-policy',
       id: 'account-password-policy',
@@ -199,6 +201,7 @@ export async function scanIAM(): Promise<ResourceSnapshot[]> {
   } catch (e: any) {
     if (e.name === 'NoSuchEntityException' || e.name === 'NoSuchEntity') {
       snapshots.push({
+        provider: 'aws',
         service: 'iam',
         type: 'password-policy',
         id: 'account-password-policy',
@@ -289,6 +292,7 @@ export async function scanIAM(): Promise<ResourceSnapshot[]> {
       }
 
       snapshots.push({
+        provider: 'aws',
         service: 'iam',
         type: 'user',
         id: userName,
@@ -318,6 +322,7 @@ export async function scanEC2(): Promise<ResourceSnapshot[]> {
 
       const tags = parseAwsTags(sg.Tags);
       snapshots.push({
+        provider: 'aws',
         service: 'ec2',
         type: 'security-group',
         id: sgId,
@@ -362,6 +367,7 @@ export async function scanCloudTrail(): Promise<ResourceSnapshot[]> {
       }
 
       snapshots.push({
+        provider: 'aws',
         service: 'cloudtrail',
         type: 'trail',
         id: trailName,
@@ -397,6 +403,7 @@ export async function scanLambda(): Promise<ResourceSnapshot[]> {
       }
 
       snapshots.push({
+        provider: 'aws',
         service: 'lambda',
         type: 'function',
         id: f.FunctionName,
@@ -451,6 +458,7 @@ export async function scanSQS(): Promise<ResourceSnapshot[]> {
       }
 
       snapshots.push({
+        provider: 'aws',
         service: 'sqs',
         type: 'queue',
         id: queueName,
@@ -490,6 +498,7 @@ export async function scanSNS(): Promise<ResourceSnapshot[]> {
       }
 
       snapshots.push({
+        provider: 'aws',
         service: 'sns',
         type: 'topic',
         id: topicName,
@@ -517,6 +526,7 @@ export async function scanSecretsManager(): Promise<ResourceSnapshot[]> {
       const tags = parseAwsTags(s.Tags);
 
       snapshots.push({
+        provider: 'aws',
         service: 'secretsmanager',
         type: 'secret',
         id: s.Name,
@@ -560,6 +570,7 @@ export async function scanSSM(): Promise<ResourceSnapshot[]> {
       }
 
       snapshots.push({
+        provider: 'aws',
         service: 'ssm',
         type: 'parameter',
         id: p.Name,
@@ -603,6 +614,7 @@ export async function scanDynamoDB(): Promise<ResourceSnapshot[]> {
       }
 
       snapshots.push({
+        provider: 'aws',
         service: 'dynamodb',
         type: 'table',
         id: table,
@@ -639,6 +651,7 @@ export async function scanCloudWatch(): Promise<ResourceSnapshot[]> {
       }
 
       snapshots.push({
+        provider: 'aws',
         service: 'cloudwatch',
         type: 'alarm',
         id: a.AlarmName,

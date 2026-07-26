@@ -1,0 +1,22 @@
+{
+  "scanId": "demo_scan_001",
+  "timestamp": "2026-07-14T12:00:00.000Z",
+  "findings": [
+    { "id": "MCPS-S3-001:vulnerable-bucket", "catalogId": "MCPS-S3-001", "title": "Public S3 Bucket", "severity": "critical", "service": "s3", "resource": "vulnerable-bucket", "riskScore": 98 },
+    { "id": "MCPS-IAM-001:admin-user", "catalogId": "MCPS-IAM-001", "title": "AdministratorAccess Attached Directly to IAM User", "severity": "critical", "service": "iam", "resource": "admin-user", "riskScore": 95 },
+    { "id": "MCPS-IAM-002:admin-user", "catalogId": "MCPS-IAM-002", "title": "Old IAM Access Keys", "severity": "critical", "service": "iam", "resource": "admin-user", "riskScore": 90 },
+    { "id": "MCPS-EC2-001:sg-vulnerable", "catalogId": "MCPS-EC2-001", "title": "SSH Open to Internet", "severity": "high", "service": "ec2", "resource": "sg-vulnerable", "riskScore": 82 },
+    { "id": "MCPS-EC2-002:sg-vulnerable", "catalogId": "MCPS-EC2-002", "title": "RDP Open to Internet", "severity": "high", "service": "ec2", "resource": "sg-vulnerable", "riskScore": 80 },
+    { "id": "MCPS-S3-002:vulnerable-bucket", "catalogId": "MCPS-S3-002", "title": "S3 Bucket Missing Default Encryption", "severity": "high", "service": "s3", "resource": "vulnerable-bucket", "riskScore": 72 },
+    { "id": "MCPS-S3-003:vulnerable-bucket", "catalogId": "MCPS-S3-003", "title": "S3 Bucket Versioning Disabled", "severity": "high", "service": "s3", "resource": "vulnerable-bucket", "riskScore": 70 },
+    { "id": "MCPS-CT-001:mcpshield-trail", "catalogId": "MCPS-CT-001", "title": "CloudTrail Disabled", "severity": "high", "service": "cloudtrail", "resource": "mcpshield-trail", "riskScore": 78 },
+    { "id": "MCPS-IAM-003:account-password-policy", "catalogId": "MCPS-IAM-003", "title": "Weak Password Policy", "severity": "medium", "service": "iam", "resource": "account-password-policy", "riskScore": 52 },
+    { "id": "MCPS-IAM-004:unused-user", "catalogId": "MCPS-IAM-004", "title": "Unused IAM User", "severity": "medium", "service": "iam", "resource": "unused-user", "riskScore": 45 },
+    { "id": "MCPS-IAM-005:admin-user", "catalogId": "MCPS-IAM-005", "title": "Unused IAM Access Keys", "severity": "medium", "service": "iam", "resource": "admin-user", "riskScore": 42 },
+    { "id": "MCPS-S3-004:vulnerable-bucket", "catalogId": "MCPS-S3-004", "title": "S3 Bucket Logging Disabled", "severity": "medium", "service": "s3", "resource": "vulnerable-bucket", "riskScore": 40 },
+    { "id": "MCPS-TAG-001:vulnerable-bucket", "catalogId": "MCPS-TAG-001", "title": "Missing Resource Tags", "severity": "low", "service": "s3", "resource": "vulnerable-bucket", "riskScore": 20 },
+    { "id": "MCPS-NAM-001:vulnerable-bucket", "catalogId": "MCPS-NAM-001", "title": "Poor Naming Convention", "severity": "low", "service": "s3", "resource": "vulnerable-bucket", "riskScore": 15 },
+    { "id": "MCPS-DESC-001:sg-vulnerable", "catalogId": "MCPS-DESC-001", "title": "Missing Resource Description", "severity": "low", "service": "ec2", "resource": "sg-vulnerable", "riskScore": 12 }
+  ],
+  "securityScore": { "score": 36, "grade": "F", "totalFindings": 15 }
+}
