@@ -1,0 +1,61 @@
+graph TB
+    subgraph Users[" "]
+        Slack[("💬 Slack Bot")]
+        CLI[("🖥️ CLI")]
+        Web[("🌐 Dashboard")]
+    end
+    subgraph Core["MCPShield Core"]
+        Agent["🤖 AI Security Analyst"]
+        MCPServer["🔌 MCP Server"]
+        PluginHost["🧩 PluginHost\nsandboxed workers"]
+        Workflow["⚙️ Workflow Engine\nDAG execution"]
+        EventBus["📨 EventBus"]
+        RBAC["🔐 RBAC"]
+    end
+    subgraph SDK["Plugin SDK"]
+        CreatePlugin["createPlugin()"]
+        ContractTests["describePlugin()"]
+        Signing["Ed25519 Signing"]
+    end
+    subgraph Connectors["Connector Layer"]
+        AwsConn["AWS SDK"]
+        K8sConn["Kubernetes API"]
+        GhConn["GitHub API"]
+    end
+    subgraph Plugins["Plugins"]
+        CloudAWS["cloud-aws"]
+        GitHub["github"]
+        Docker["docker"]
+        Markdown["markdown-reporter"]
+    end
+    subgraph Targets["Targets"]
+        AWS["☁️ AWS"]
+        K8s["⎈ Kubernetes"]
+        GH["🐙 GitHub"]
+        DOCKER["🐳 Docker"]
+    end
+    Slack --> Agent
+    CLI --> MCPServer
+    Web --> MCPServer
+    Agent <--> MCPServer
+    MCPServer --> PluginHost
+    PluginHost --> Workflow
+    PluginHost --> EventBus
+    PluginHost --> RBAC
+    PluginHost --> Plugins
+    Plugins --> CreatePlugin
+    Plugins --> ContractTests
+    Plugins --> Signing
+    CloudAWS --> AwsConn
+    GitHub --> GhConn
+    Docker --> K8sConn
+    AwsConn --> AWS
+    GhConn --> GH
+    K8sConn --> K8s
+    Docker --> DOCKER
+    style Users fill:#f0f4ff,stroke:#1e40af
+    style Core fill:#f0fdf4,stroke:#059669
+    style SDK fill:#fef3c7,stroke:#d97706
+    style Connectors fill:#fce7f3,stroke:#be185d
+    style Plugins fill:#ede9fe,stroke:#6d28d9
+    style Targets fill:#e0e7ff,stroke:#4338ca

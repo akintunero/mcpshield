@@ -1,0 +1,26 @@
+flowchart LR
+    subgraph PluginPackage["Plugin Package"]
+        direction TB
+        Manifest["plugin.json"]
+        Code["src/index.ts\nexport default createPlugin({...})"]
+        Tests["src/index.test.ts\ndescribePlugin()"]
+    end
+    subgraph SDK["@mcpshield/plugin-sdk"]
+        CP["createPlugin()\n• validates manifest\n• checks API version\n• wraps handlers"]
+        DP["describePlugin()\n• contract tests\n• compliance report"]
+        Types["Types\n• Finding\n• PluginContext\n• CapabilityHandlers"]
+    end
+    subgraph Host["@mcpshield/mcp-core"]
+        PH["PluginHost\n• load plugin.json\n• init plugin\n• health checks"]
+        Sandbox["Sandbox\n• worker thread\n• memory limits\n• timeouts"]
+        WE["WorkflowEngine\n• DAG execution\n• capability routing"]
+    end
+    Code -->|import| CP
+    Tests -->|import| DP
+    CP -->|register| PH
+    PH -->|run in| Sandbox
+    Sandbox -->|results| WE
+    Manifest -->|discovered by| PH
+    style PluginPackage fill:#f0fdf4,stroke:#059669
+    style SDK fill:#fef3c7,stroke:#d97706
+    style Host fill:#ede9fe,stroke:#6d28d9

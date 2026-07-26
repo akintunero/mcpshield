@@ -1,0 +1,42 @@
+sequenceDiagram
+    participant User as 👤 User
+    participant AI as 🤖 AI Agent
+    participant MCP as 🔌 MCP Server
+    participant Plugin as 🧩 PluginHost
+    participant Target as ☁️ Target
+
+    rect rgb(219, 234, 254)
+        Note over User,Target: 🔍 SCAN
+        User->>AI: @Shield scan
+        AI->>MCP: scan_environment
+        MCP->>Plugin: scan()
+        Plugin->>Target: listResources()
+        Target-->>Plugin: resources
+        Plugin-->>MCP: findings
+        MCP-->>AI: findings + score
+        AI-->>User: 📊 Report with 14 findings
+    end
+
+    rect rgb(254, 243, 199)
+        Note over User,Target: 📋 APPROVE
+        User->>AI: @Shield fix critical
+        AI->>MCP: approve_remediation
+        MCP->>MCP: check RBAC role
+        MCP-->>AI: "pending execution"
+        AI-->>User: ⚠️ Proposed fixes (review only)
+        User->>AI: @Shield approve
+        AI->>MCP: execute_remediation
+    end
+
+    rect rgb(209, 250, 229)
+        Note over User,Target: ⚡ REMEDIATE
+        MCP->>Plugin: remediate(finding)
+        Plugin->>Target: disablePublicAccess()
+        Target-->>Plugin: success
+        Plugin->>Target: verify()
+        Target-->>Plugin: verified
+        Plugin-->>MCP: result + evidence
+        MCP->>MCP: record audit + update score
+        MCP-->>AI: ✅ completed
+        AI-->>User: 📈 Score improved 7 → 92
+    end
