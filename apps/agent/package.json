@@ -14,7 +14,7 @@
   "dependencies": {
     "@slack/bolt": "^4.1.1",
     "@modelcontextprotocol/sdk": "^1.0.1",
-    "zod": "^3.25.0",
+    "zod": "^4.4.3",
     "@mcpshield/types": "workspace:*",
     "@mcpshield/shared": "workspace:*",
     "@mcpshield/logger": "workspace:*",
